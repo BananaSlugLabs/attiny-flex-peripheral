@@ -33,16 +33,15 @@ certain traits of the microcontroller we can minimize wasted pins.
     - (Future) Larger chips could potentially support off load EEPROM to store sequences
     - (Future) HID support for keypads, quadrature encoders, etc
 
-## Devices:
+## Variant: I2C
 
-### ATTiny402
+### Limitations (ATTiny402)
+
+- Flash: 4k
 - Pins: 8 (5 available + UPPI)
 - RAM: 256 byte
-- Flash: 4k
 
-#### Constraints
-
-- Memory:
-    -ATTiny402 has 256 bytes of ram.
-    - ~50 LEDs seems plausible
-    - Idea: Increase by using flash and eeprom for lookup tables
+Can support as many LEDs as memory will permit in theory, however, the current
+limitation tops off at ~70 LEDs. It is possible to increase this value, but
+given the memory constraints I considered it a trade off that allowed for
+optimization.

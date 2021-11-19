@@ -14,7 +14,7 @@ static bool Led_IrqMode = true;
 #define LED_CMD_IDLE            0xFF
 #define LED_CMD_CHANGED         0xFE
 #define LED_CMD_BEGIN_BREAK     0xFD
-#define LED_CMD_END_BREAK       0xE0
+#define LED_CMD_END_BREAK       0xE8
 #define LED_CMD_LAST_PIXEL     (CONFIG_LED_COUNT*sizeof(LedColor))-1
 #define LED_CMD_FIRST_PIXEL    0
 
@@ -101,6 +101,8 @@ bool Led_IsBusy() {
     return Led.cmd < LED_CMD_CHANGED;
 }
 
+
+
 void Led_Update() {
     if (Led_IsBusy()) {
         return;
@@ -108,35 +110,45 @@ void Led_Update() {
     
     Led.cmd = LED_CMD_BEGIN_BREAK;
     
-    CCL.LUT0CTRLA &= ~1;
-    
-    USART0.STATUS = USART_TXCIF_bm;
-    TCB0.CTRLA &= ~0x01;
-    
-    for (; Led.cmd > LED_CMD_END_BREAK; Led.cmd --) {
-        USART0.TXDATAL = 0;
-        while (!(USART0.STATUS & USART_DREIF_bm));
-    }
-    
-    Led.cmd = LED_CMD_FIRST_PIXEL;
-            
-    while (!(USART0.STATUS & USART_TXCIF_bm));
+    // Disable CCL Output, Timer, and clear USART Transmit Done Flag
+    CCL.LUT0CTRLA &= ~CCL_ENABLE_bm;
+    TCB0.CTRLA &= ~TCB_ENABLE_bm;
     USART0.STATUS = USART_TXCIF_bm;
     
-    CCL.LUT0CTRLA |= 1;
-    TCB0.CTRLA |= 0x01;
     
-    uint8_t* buf = Led_Buffer.raw;
+    //if (!Led_IrqMode) {
+    //    USART0.CTRLA |= 
+        
+    //} else {
     
-    for (; Led.cmd < LED_CMD_LAST_PIXEL; Led.cmd++) {
-        while (!(USART0.STATUS & USART_DREIF_bm));
-        USART0.TXDATAL = buf[Led.cmd];
-    }
-    
-    while (!(USART0.STATUS & USART_TXCIF_bm));
-    USART0.STATUS = USART_TXCIF_bm;
-    
-    Led.cmd = LED_CMD_IDLE;
+        for (; Led.cmd > LED_CMD_END_BREAK; Led.cmd --) {
+            USART0.TXDATAL = 0;
+            while (!(USART0.STATUS & USART_DREIF_bm));
+        }
+
+        Led.cmd = LED_CMD_FIRST_PIXEL;
+        
+        // Wait for TX to complete:
+        while (!(USART0.STATUS & USART_TXCIF_bm));
+        
+        // Enable CCL Output, Timer, and clear USART Transmit Done Flag
+        USART0.STATUS = USART_TXCIF_bm;
+        CCL.LUT0CTRLA |= CCL_ENABLE_bm;
+        TCB0.CTRLA |= TCB_ENABLE_bm;
+
+        // Iterate through each pixel and send when buffered register is set.
+        uint8_t* buf = Led_Buffer.raw;
+        for (; Led.cmd < LED_CMD_LAST_PIXEL; Led.cmd++) {
+            while (!(USART0.STATUS & USART_DREIF_bm));
+            USART0.TXDATAL = buf[Led.cmd];
+        }
+        
+        // Ensure that transmit is completed.
+        while (!(USART0.STATUS & USART_TXCIF_bm));
+        USART0.STATUS = USART_TXCIF_bm;
+
+        Led.cmd = LED_CMD_IDLE;
+    //}
 }
 
 void Led_Task() {
