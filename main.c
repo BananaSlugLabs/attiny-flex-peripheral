@@ -1,8 +1,14 @@
 #include "mcc_generated_files/mcc.h"
 #include "common.h"
 
+void App_Init() {
+    
+}
+void App_InitIO() {
+    
+}
 void App_Task () {
-#if 0
+#if 1
     static uint8_t i = 0;
     static uint8_t seq = 0;
     if (!Led_IsBusy()) {
@@ -20,7 +26,7 @@ void App_Task () {
         c.g=(seq & 2) ? i : 0;
         c.b=(seq & 4) ? i : 0;
         
-        Led_SetAll(c);
+        Led_SetAll(&c);
         
         Time_Sleep(10);
         i++;

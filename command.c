@@ -13,8 +13,8 @@
 
 typedef enum BusStateTag {
     BusIdle = 0,
-    BusWaitIndex,
-    BusTransact
+    BusSetIndexOrReadIncrement, // The first write after address will 
+    BusReadOrWriteIncrement
 } BusState;
 
 #define Bus_RegisterFileBytes ((uint8_t*)&Bus_RegisterFile)
@@ -26,84 +26,29 @@ static BusState Bus_State = BusIdle;
 #define TWI_CMD_NACK            (TWI_SCMD_RESPONSE_gc | TWI_ACKACT_NACK_gc)
 #define TWI_CMD_DONE            (TWI_SCMD_COMPTRANS_gc)
 
+// Not needed, but kept around for reference.
+#if 0
 #define TWI_STATUS_ERR(s)       ((s) & (TWI_COLL_bm|TWI_BUSERR_bm))
 #define TWI_STATUS_WRITE(s)     (((s) & (TWI_DIF_bm|TWI_DIR_bm)) == (TWI_DIF_bm))
 #define TWI_STATUS_READ(s)      (((s) & (TWI_DIF_bm|TWI_DIR_bm)) == (TWI_DIF_bm|TWI_DIR_bm))
 #define TWI_STATUS_RXNAK(s)     ((s) & (TWI_RXACK_bm))
 #define TWI_STATUS_ADDR(s)      (((s) & (TWI_APIF_bm|TWI_AP_bm)) == (TWI_APIF_bm|TWI_AP_bm))
 #define TWI_STATUS_STOP(s)      (((s) & (TWI_APIF_bm|TWI_AP_bm)) == (TWI_APIF_bm))
-
+#endif
 ISR(TWI0_TWIS_vect) {
-    uint8_t s = TWI0.SSTATUS;                //status copy
-#if 0
-    uint8_t isErr =    s & 0x0C;             //either- COLL, BUSERR
-    uint8_t masterR = (s & 0x82) == 0x82;    //DIF, DIR(1=R)
-    uint8_t masterW = (s & 0x82) == 0x80;    //DIF, DIR(0=W)
-    uint8_t rxnack =   s & 0x10;             //RXACK(0=ACK,1=NACK)
-    uint8_t isAddr =  (s & 0x41) == 0x41;    //APIF, AP(1=addr)
-    uint8_t isStop =  (s & 0x41) == 0x40;    //APIF, AP(0=stop)
-#endif
-#if 0
-    uint8_t isErr       = TWI_STATUS_ERR(s);
-    uint8_t masterR     = TWI_STATUS_READ(s);
-    uint8_t masterW     = TWI_STATUS_WRITE(s);
-    uint8_t rxnack      = TWI_STATUS_RXNAK(s);
-    uint8_t isAddr      = TWI_STATUS_ADDR(s);
-    uint8_t isStop      = TWI_STATUS_STOP(s);
-#endif
-    // collision, buserror, or stop
-#if 0
-    if( isErr || isStop ) {
-        TWI0.SCTRLB = TWI_CMD_DONE; // CMD: Done
-        Bus_State = BusIdle;
-        return;
-    }
-    
-    if( isAddr ){ 
-        TWI0.SCTRLB = TWI_CMD_ACK; // CMD: ACK
-        Bus_State = BusWaitIndex;
-        return;
-    }
-#else
+    uint8_t s = TWI0.SSTATUS;
+
     if (s & TWI_APIF_bm) {
         if (s & TWI_AP_bm) {
             TWI0.SCTRLB = TWI_CMD_ACK;
-            Bus_State = BusWaitIndex;
+            Bus_State = BusSetIndexOrReadIncrement;
         } else {
             TWI0.SCTRLB = TWI_CMD_DONE;
             Bus_State = BusIdle;
         }
         return;
     }
-#endif
-#if 0
-    //data, master read
-    if( masterR ){
-        if( (Bus_Index && rxnack) || (Bus_Index >= sizeof(Bus_RegisterFile)) ) {
-            TWI0.SCTRLB = TWI_CMD_DONE; // CMD: Complete
-            return;
-        }
-        TWI0.SDATA = Bus_RegisterFileBytes[Bus_Index++];
-        TWI0.SCTRLB = TWI_CMD_ACK; // CMD: ACK
-        return;
-    }
-    //data, master write
-    if( masterW ){
-        if (Bus_State == BusWaitIndex) {
-            Bus_Index = TWI0.SDATA;
-            Bus_State = BusTransact;
-            TWI0.SCTRLB = TWI_CMD_ACK; // CMD: ACK
-        } else {
-            if( Bus_Index >= sizeof(Bus_RegisterFile) ) {
-                TWI0.SCTRLB = TWI_CMD_NACK; // CMD: NACK
-                return;
-            }
-            Bus_RegisterFileBytes[Bus_Index++] = TWI0.SDATA;
-            TWI0.SCTRLB = TWI_CMD_ACK; // CMD: ACK
-            return;
-        }
-    }
-#else
+    
     if (s & TWI_DIF_bm) {
         if (s & TWI_DIR_bm) {
             // ************ Master Read ****************************************
@@ -115,9 +60,9 @@ ISR(TWI0_TWIS_vect) {
             TWI0.SCTRLB = TWI_CMD_ACK;
         } else {
             // ************ Master Write ***************************************
-            if (Bus_State == BusWaitIndex) {
+            if (Bus_State == BusSetIndexOrReadIncrement) {
                 Bus_Index = TWI0.SDATA;
-                Bus_State = BusTransact;
+                Bus_State = BusReadOrWriteIncrement;
                 TWI0.SCTRLB = TWI_CMD_ACK;
             } else {
                 if( Bus_Index >= sizeof(Bus_RegisterFile) ) {
@@ -130,7 +75,6 @@ ISR(TWI0_TWIS_vect) {
             }
         }
     }
-#endif
 }
 
 #if 0

@@ -50,15 +50,13 @@ optimization.
 ## Register File
 
 ```
-Command:    Device Info (0)
-    1       Device ID (0x
+0:1         DeviceID            0x2812
+3           LED:ControlA
+4           LED:ControlB
+5           LED:Status
+6
+7
+8:23        LED:Color           2 x 4-bit
+25:120      LED:Pallet
 
-Command:    WriteLED (1)
-
-    1       LED Index (0xFF -> Set All)
-    2       R
-    3       G
-    4       B
-
-Command:
 ```

@@ -7,13 +7,12 @@
 
 #ifndef COMMON_H
 #define	COMMON_H
-
-#include "mcc_generated_files/mcc.h"
 #include <stdbool.h>
+#include <stdint.h>
+#include "device_config.h"
+#include "mcc_generated_files/mcc.h"
 #include <util/atomic.h>
 
-#define CONFIG_LED_COUNT            4
-#define CONFIG_TWI_ADDR_DEFAULT     82
     
 #ifndef DISABLE_INTERRUPTS
 #define DISABLE_INTERRUPTS()   __disable_interrupt();
@@ -34,6 +33,8 @@ extern "C" {
     #define DEBUG_BREAKPOINT() asm("BREAK")
     
     void App_Task();
+    void App_Init();
+    void App_InitIO();
     
     // **** Core System Functions **********************************************
     typedef enum SysAbortCodeTag {
@@ -80,10 +81,25 @@ extern "C" {
         uint8_t b;
     } LedColor;
     
+    typedef enum LedColorMaskTag {
+        LedColorMask_Red    = 1<<0,
+        LedColorMask_Green  = 1<<1,
+        LedColorMask_Blue   = 1<<2,
+        LedColorMask_RGB    = 1<<3,
+    } LedColorMask;
+    
+    typedef enum BuiltInPalletTag {
+        BuiltInPallet_Black, BuiltInPallet_White, BuiltInPallet_Red, BuiltInPallet_Green, BuiltInPallet_Blue, BuiltInPallet_MAX
+    } BuiltInPallet;
+    
+    extern const const LedColor BuiltinPallet[BuiltInPallet_MAX];
+    
     void Led_Init();
+    void Led_InitIO();
     void Led_FaultInit();
-    void Led_Set(uint16_t index, LedColor color);
-    void Led_SetAll(LedColor color);
+    void Led_Set(uint8_t index, const const LedColor* color);
+    void Led_SetMasked(uint8_t index, const const LedColor* colorA, const const LedColor* colorB, LedColorMask mask);
+    void Led_SetAll(const const LedColor* color);
     bool Led_IsBusy();
     void Led_Update();
     void Led_Task();
@@ -107,14 +123,17 @@ extern "C" {
 
     
     // **** TWI Register File ******************************************************
-    typedef struct LedControlRegisterTag {
-        bool    update : 1;
-        bool    busy   : 1;
-    } LedControlRegister;
+    typedef struct LedRegisterStatusATag {
+        bool    update      : 1;
+        bool    busy        : 1;
+        uint8_t _r0         : 2;
+        uint8_t count       : 4;
+    } LedRegisterControlA;
     
     typedef struct RegisterFileTag {
-        LedControlRegister led_config;
-        uint8_t            _reserved[3];
+        LedRegisterControlA     led_config;
+        uint8_t                 led_count;
+        uint8_t                 _reserved[2];
         union {
             LedColor colors [CONFIG_LED_COUNT];
             uint8_t  raw[CONFIG_LED_COUNT*sizeof(LedColor)];
