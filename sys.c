@@ -13,20 +13,26 @@ void Sys_Abort(SysAbortCode code) {
     sys_fault = code;
     DISABLE_INTERRUPTS();
     DEBUG_BREAKPOINT();
+#if CONFIG_ABORT_LEDCODE
+    wdt_reset();
+    wdt_disable();
     Led_Init();
     for (;;) {
         Led_SetAll(&BuiltinPallet[BuiltInPallet_Black]);
         Led_Update();
-        Time_Sleep(500);
+        Time_Sleep(250);
                 
-        Led_SetMasked(1, &BuiltinPallet[BuiltInPallet_Green], &BuiltinPallet[BuiltInPallet_Blue], (code<<3));
-        Led_SetMasked(1, &BuiltinPallet[BuiltInPallet_Green], &BuiltinPallet[BuiltInPallet_Blue], (code<<2));
-        Led_SetMasked(2, &BuiltinPallet[BuiltInPallet_Green], &BuiltinPallet[BuiltInPallet_Blue], (code<<1));
-        Led_SetMasked(3, &BuiltinPallet[BuiltInPallet_Green], &BuiltinPallet[BuiltInPallet_Blue], (code<<0));
+        Led_SetMasked(0, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<3)&LedColorMask_RGB);
+        Led_SetMasked(1, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<2)&LedColorMask_RGB);
+        Led_SetMasked(2, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<1)&LedColorMask_RGB);
+        Led_SetMasked(3, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<0)&LedColorMask_RGB);
         Led_Update();
-        Time_Sleep(500);
+        Time_Sleep(750);
         
     }
+#else
+    for (;;);
+#endif
 }
 
 int main () {

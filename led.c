@@ -246,10 +246,10 @@ void Led_SetAll(const LedColor* color){
 void Led_SetMasked(uint8_t index, const LedColor* colorA, const LedColor* colorB, LedColorMask mask) {
     if (index < CONFIG_LED_COUNT) {
         if (mask & LedColorMask_RGB) {
-            mask = 0x7;
+            mask = 0xF;
         }
-        Bus_RegisterFile.led_data.colors[index].r = mask & 1 ? colorB->r : colorA->b;
-        Bus_RegisterFile.led_data.colors[index].g = mask & 2 ? colorB->g : colorA->b;
+        Bus_RegisterFile.led_data.colors[index].r = mask & 1 ? colorB->r : colorA->r;
+        Bus_RegisterFile.led_data.colors[index].g = mask & 2 ? colorB->g : colorA->g;
         Bus_RegisterFile.led_data.colors[index].b = mask & 4 ? colorB->b : colorA->b;
     }
     Bus_RegisterFile.led_config.update = true;

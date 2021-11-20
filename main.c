@@ -1,14 +1,12 @@
 #include "mcc_generated_files/mcc.h"
 #include "common.h"
 
-void App_Init() {
-    
-}
-void App_InitIO() {
-    
-}
+void App_Init() {}
+
+void App_InitIO() {}
+
 void App_Task () {
-#if 1
+#if 0
     static uint8_t i = 0;
     static uint8_t seq = 0;
     if (!Led_IsBusy()) {
@@ -26,10 +24,15 @@ void App_Task () {
         c.g=(seq & 2) ? i : 0;
         c.b=(seq & 4) ? i : 0;
         
-        Led_SetAll(&c);
+        Led_Set(2, &c);
+        Led_Set(1, &BuiltinPallet[BuiltInPallet_Blue]);
         
         Time_Sleep(10);
         i++;
+        
+        if (seq == 3) {
+            Sys_Abort(SysAbortAssertion);
+        }
     }
 #endif
 }

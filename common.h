@@ -95,8 +95,6 @@ extern "C" {
     extern const const LedColor BuiltinPallet[BuiltInPallet_MAX];
     
     void Led_Init();
-    void Led_InitIO();
-    void Led_FaultInit();
     void Led_Set(uint8_t index, const const LedColor* color);
     void Led_SetMasked(uint8_t index, const const LedColor* colorA, const const LedColor* colorB, LedColorMask mask);
     void Led_SetAll(const const LedColor* color);

@@ -11,11 +11,13 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+
+#define CONFIG_ABORT_LEDCODE                    1
     
 #define CONFIG_LED_COUNT                        4
-#define CONFIG_LED_R_INTENSITY                  0x20
-#define CONFIG_LED_G_INTENSITY                  0x20
-#define CONFIG_LED_B_INTENSITY                  0x20
+#define CONFIG_LED_R_INTENSITY                  0xFF
+#define CONFIG_LED_G_INTENSITY                  0xFF
+#define CONFIG_LED_B_INTENSITY                  0xFF
     
 #define CONFIG_TWI_ADDR_DEFAULT                 82
     
