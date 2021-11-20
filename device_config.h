@@ -30,11 +30,23 @@ extern "C" {
  * Maximum LEDs to support.
  */
 #define CONFIG_LED_COUNT                        4
+    
+/**
+ * Uses the body of the interrupt handler to implement a pseudo interrupt when
+ * polling. This avoids duplicating code.
+ * 
+ * By far one of my most impressive reckless, unsafe and satisfying optimizations
+ * in recent memory. Saved a whopping 82 bytes of program memory.
+ */
 #define CONFIG_LED_OPTIMIZE_SIZE                DEF_ENABLE
     
 #define CONFIG_LED_R_INTENSITY                  0x20
 #define CONFIG_LED_G_INTENSITY                  0x20
 #define CONFIG_LED_B_INTENSITY                  0x20
+   
+#define CONFIG_LED_IRQ_PERF                     DEF_DISABLE
+#define CONFIG_LED_IRQ_PORT                     VPORTA
+#define CONFIG_LED_IRQ_PIN                      2               // Reuses SCL pin
     
 // *****************************************************************************
 // **** Command Bus (TWI) ******************************************************
@@ -44,6 +56,7 @@ extern "C" {
  * in the EEPROM.
  */
 #define CONFIG_TWI_ADDR_DEFAULT                 82
+#define CONFIG_TWI_BUS                          DEF_DISABLE
 
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -145,6 +158,14 @@ extern "C" {
  */
 #define CONFIG_TEST_ABORT                       DEF_ENABLE
 
+#if CONFIG_LED_IRQ_PERF && CONFIG_TWI_BUS
+#error "Cannot enable TWI bus and IRQ performance monitor."
+#endif
+#if CONFIG_LED_IRQ_PERF && (!defined(CONFIG_LED_IRQ_PORT) || !defined(CONFIG_LED_IRQ_PIN))
+#error "Missing IRQ Port/Pin configuration for performance measurements."
+#endif
+    
+    
 
 #ifdef	__cplusplus
 }

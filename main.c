@@ -1,4 +1,3 @@
-#include "mcc_generated_files/mcc.h"
 #include "common.h"
 
 void App_Init() {}

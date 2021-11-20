@@ -142,6 +142,7 @@ ISR(TWI0_TWIS_vect) {
 #endif
 
 void Command_Init() {
+#if CONFIG_TWI_BUS
     //SDASETUP 4CYC; SDAHOLD OFF; FMPEN disabled; 
     TWI0.CTRLA = 0x00;
     
@@ -165,6 +166,7 @@ void Command_Init() {
     
     //DIF disabled; APIF disabled; COLL disabled; BUSERR disabled; 
     TWI0.SSTATUS = 0x00;
+#endif
 }
 
 

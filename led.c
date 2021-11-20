@@ -1,4 +1,5 @@
 #include "common.h"
+#include <avr/cpufunc.h>
 
 /**
  * The state machine works like so:
@@ -95,39 +96,25 @@ ISR(USART0_DRE_vect) {
 #endif
 
 #if CONFIG_LED_OPTIMIZE_SIZE
-// While less efficient, this will simulate the interrupts in the Led_Update
-// rather than reimplementing the as a more traditional polled loop.
-// 
-// It would be even more fun if I was able to use the interrupt controller to
-// decide between RETI/RET returns.
-void ISR_Led_TXC ();
-void ISR_Led_DRE ();
-#define LED_IRQ_ATTR ISR_NAKED
-#else
-#define LED_IRQ_ATTR ISR_BLOCK
+// While less efficient than the run of the mill polled implementation,
+// when interrupts are disabled, we can jump in to the middle of the IRQ handler
+// and use the interrupt controller to see if we need to RET.
+//
+// It's highly questionable especially since it's entirely possible it may break
+// after a change.
+void SoftISR_Led_TXC ();
+void SoftISR_Led_DRE ();
 #endif
 
 ISR(USART0_TXC_vect) {
 #if CONFIG_LED_OPTIMIZE_SIZE
-    /*
-    asm("push	r1 \n"
-        "push	r0 \n"
-        "in	r0, 0x3f \n"
-        "push	r0 \n"
-        "eor	r1, r1 \n"
-        "push	r24\n");
-     */
-    
-    ISR_Led_TXC();
-    
-    /*asm("pop	r24 \n"
-        "pop	r0 \n"
-        "out	0x3f, r0 \n"
-        "push	r0 \n"
-        "pop	r1\n");
-    reti();*/
-}
-void ISR_Led_TXC () {
+    asm volatile(
+        ".global SoftISR_Led_TXC \n"
+        "SoftISR_Led_TXC:"
+    );
+#endif
+#if CONFIG_LED_IRQ_PERF
+    CONFIG_LED_IRQ_PORT.OUT |= (1<<CONFIG_LED_IRQ_PIN);
 #endif
     switch (Led.state) {
         case LED_STATE_RESET_DONE:
@@ -139,7 +126,7 @@ void ISR_Led_TXC () {
             USART0.CTRLA    = USART_DREIE_bm; // Switch to DRE IRQ
             // Note: Annoyingly, the high priority DRE interrupt is fired immediately due to high priority
             // Need to see if there is a workaround to prevent this from happening -- could pre-fill USART0.TXDATAL buffers?
-            return;
+            break;
             
         case LED_STATE_STREAM_PIXEL_DONE:
             Led.index       = 0;
@@ -150,38 +137,32 @@ void ISR_Led_TXC () {
             USART0.CTRLB    &= ~USART_TXEN_bm;
             Led.state       = LED_STATE_IDLE;
             Bus_RegisterFile.led_config.busy = false;
-            return;
+            break;
+            
         default:
             DEBUG_BREAKPOINT();
-            return;
+            break;
     }
+#if CONFIG_LED_IRQ_PERF
+    CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
+#endif
+#if CONFIG_LED_OPTIMIZE_SIZE
+    if (!(CPUINT.STATUS&0x3)) {
+        asm volatile("ret \n");
+    }
+#endif
 }
 
+// Note: Based on testing, DRE takes approx 1uSec to execute.
 ISR(USART0_DRE_vect) {
 #if CONFIG_LED_OPTIMIZE_SIZE
-    /*asm("push	r1 \n"
-        "push	r0 \n"
-        "in	r0, 0x3f \n"
-        "push	r0 \n"
-        "eor	r1, r1 \n"
-        "push	r24 \n"
-        "push	r25 \n"
-        "push	r30 \n"
-        "push	r31 \n");*/
-    
-    ISR_Led_DRE();
-    
-    /*asm("pop	r31 \n"
-        "push	r30 \n"
-        "push	r25 \n"
-        "push	r24 \n"
-        "pop	r0 \n"
-        "out	0x3f, r0 \n"
-        "push	r0 \n"
-        "pop	r1 \n");
-    reti();*/
-}
-void ISR_Led_DRE () {
+    asm volatile(
+        ".global SoftISR_Led_DRE \n"
+        "SoftISR_Led_DRE:"
+    );
+#endif
+#if CONFIG_LED_IRQ_PERF
+    CONFIG_LED_IRQ_PORT.OUT |= (1<<CONFIG_LED_IRQ_PIN);
 #endif
     switch (Led.state) {
         case LED_STATE_STREAM_PIXEL:
@@ -191,7 +172,8 @@ void ISR_Led_DRE () {
                 USART0.CTRLA    = USART_TXCIE_bm; // switch to TXC IRQ
                 Led.state       = LED_STATE_STREAM_PIXEL_DONE;
             }
-            return;
+            break;
+            
         case LED_STATE_RESET:
             USART0.TXDATAL = 0;
             Led.index ++;   
@@ -199,14 +181,32 @@ void ISR_Led_DRE () {
                 USART0.CTRLA    = USART_TXCIE_bm;  // switch to TXC IRQ
                 Led.state       = LED_STATE_RESET_DONE;
             }
-            return;
+            break;
             
         default:
             DEBUG_BREAKPOINT();
-            return;
+            break;
     }
+#if CONFIG_LED_IRQ_PERF
+    CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
+#endif
+#if CONFIG_LED_OPTIMIZE_SIZE
+    if (!(CPUINT.STATUS&0x3)) {
+        asm volatile("ret \n");
+    }
+#endif
 }
 
+#if CONFIG_LED_OPTIMIZE_SIZE
+/*
+void ISR_Led_TXC () {
+    asm volatile("jmp USART0_TXC_vect_START");
+}
+void ISR_Led_DRE () {
+    asm volatile("jmp USART0_DRE_vect_START");
+}
+ */
+#endif
 void Led_Init() {
     
     // **** IO Configuration ***************************************************
@@ -311,6 +311,11 @@ void Led_Init() {
     Led.state = LED_STATE_IDLE;
     Led.index = 0;
     Led.total = sizeof(Bus_RegisterFile.led_data.raw);
+
+#if CONFIG_LED_IRQ_PERF
+    CONFIG_LED_IRQ_PORT.DIR |= (1<<CONFIG_LED_IRQ_PIN);
+    CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
+#endif
     
     Led_SetAll(&BuiltinPallet[BuiltInPallet_White]);
     Bus_RegisterFile.led_config.update = true;
@@ -370,9 +375,9 @@ void Led_Update() {
         USART0.CTRLA = USART_DREIE_bm;
         while (USART0.CTRLA & (USART_TXCIE_bm | USART_DREIE_bm)) {
             if ((USART0.CTRLA & USART_DREIE_bm) && (USART0.STATUS & USART_DREIF_bm)) {
-                ISR_Led_DRE();
+                SoftISR_Led_DRE();
             } else if ((USART0.CTRLA & USART_TXCIE_bm) && (USART0.STATUS & USART_TXCIF_bm)) {
-                ISR_Led_TXC();
+                SoftISR_Led_TXC();
             }
         }
 #else

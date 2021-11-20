@@ -9,17 +9,19 @@
 #define	COMMON_H
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
 #include "device_config.h"
-#include "mcc_generated_files/mcc.h"
+#include <avr/io.h>
+#include <avr/builtins.h>
+//#include "mcc_generated_files/mcc.h"
 #include <util/atomic.h>
+#include <avr/cpufunc.h>
 
-    
-#ifndef DISABLE_INTERRUPTS
-#define DISABLE_INTERRUPTS()   __disable_interrupt();
-#endif
-#ifndef ENABLE_INTERRUPTS
-#define ENABLE_INTERRUPTS()    __enable_interrupt();
-#endif
+#define DISABLE_INTERRUPTS()   cli()
+#define ENABLE_INTERRUPTS()    sei()
+
+#include "mcc_generated_files/config/clock_config.h"
 
 #ifdef	__cplusplus
 extern "C" {
