@@ -9,11 +9,19 @@
 #define	COMMON_H
 
 #include "mcc_generated_files/mcc.h"
-#include "stdbool.h"
+#include <stdbool.h>
+#include <util/atomic.h>
 
 #define CONFIG_LED_COUNT            4
 #define CONFIG_LED_PALLET           16
 #define CONFIG_TIMERS_COUNT         8
+    
+#ifndef DISABLE_INTERRUPTS
+#define DISABLE_INTERRUPTS()   __disable_interrupt();
+#endif
+#ifndef ENABLE_INTERRUPTS
+#define ENABLE_INTERRUPTS()    __enable_interrupt();
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
@@ -24,12 +32,22 @@ extern "C" {
     typedef uint16_t Time16; // in msec
     typedef uint32_t Time32; // in msec
     
+    #define DEBUG_BREAKPOINT() asm("BREAK")
+    
     void App_Task();
     
     // **** Core System Functions **********************************************
+    typedef enum SysAbortCodeTag {
+        SysAbortNone,
+        SysAbortBadIRQ     = 0B0001,
+        SysAbortAssertion  = 0B1010
+    } SysAbortCode;
+    
     void Sys_EarlyInit();
     void Sys_Init();
     void Sys_Loop();
+    void Sys_Abort(SysAbortCode code);
+    bool Sys_IsFaultMode();
     
     // **** Timer Functions ****************************************************
     TimerHandle Timer_Create(TimerInterval interval, bool repeat);
@@ -64,6 +82,7 @@ extern "C" {
     } LedColor;
     
     void Led_Init();
+    void Led_FaultInit();
     void Led_Set(uint16_t index, LedColor color);
     void Led_SetAll(LedColor color);
     bool Led_IsBusy();
@@ -86,6 +105,7 @@ extern "C" {
     
     void Persist_Get(PersistRecord rec, void* info, size_t size);
     void Persist_Set(PersistRecord rec, void* info, size_t size);
+
     
 #ifdef	__cplusplus
 }
