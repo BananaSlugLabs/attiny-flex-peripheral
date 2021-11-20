@@ -39,14 +39,16 @@ extern "C" {
     // **** Core System Functions **********************************************
     typedef enum SysAbortCodeTag {
         SysAbortNone,
-        SysAbortBadIRQ     = 0B0001,
-        SysAbortAssertion  = 0B1010
+        SysAbortBadIRQ      = 0B0001,
+        SysNmiIRQ           = 0B0010,
+        SysAbortAssertion   = 0B1010
     } SysAbortCode;
     
     void Sys_EarlyInit();
     void Sys_Init();
     void Sys_Loop();
     void Sys_Abort(SysAbortCode code);
+    void Sys_Restart();
     bool Sys_IsFaultMode();
     
     // **** Timer Functions ****************************************************
@@ -105,6 +107,7 @@ extern "C" {
     // **** Device Control & Configuration *************************************
     void Command_Init();
     void Command_Task();
+    void Command_Finit();
     
     // **** Device Control & Configuration *************************************
     typedef enum {

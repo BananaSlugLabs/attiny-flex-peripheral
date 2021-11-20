@@ -8,31 +8,76 @@ static volatile SysAbortCode sys_fault;
 ISR(BADISR_vect) {
     Sys_Abort(SysAbortBadIRQ);
 }
+ISR(CRCSCAN_NMI_vect) {
+    Sys_Abort(SysAbortBadIRQ);
+}
 
+#if !defined(CONFIG_ABORT_LEDCODE_TIMER_HI) || CONFIG_ABORT_LEDCODE_TIMER_HI <= 0
+#define _CONFIG_ABORT_LEDCODE_TIMER_HI 1000
+#else
+#define _CONFIG_ABORT_LEDCODE_TIMER_HI CONFIG_ABORT_LEDCODE_TIMER_HI
+#endif
+#if !defined(CONFIG_ABORT_LEDCODE_TIMER_LO) || CONFIG_ABORT_LEDCODE_TIMER_LO <= 0
+#define _CONFIG_ABORT_LEDCODE_TIMER_LO 500
+#else
+#define _CONFIG_ABORT_LEDCODE_TIMER_LO CONFIG_ABORT_LEDCODE_TIMER_LO
+#endif
 void Sys_Abort(SysAbortCode code) {
-    sys_fault = code;
     DISABLE_INTERRUPTS();
+    
+    sys_fault = code;
+    
+#if _CONFIG_ABORT_GET_LEDCODE_BREAKPOINT
     DEBUG_BREAKPOINT();
-#if CONFIG_ABORT_LEDCODE
+#endif
+    
+#if _CONFIG_ABORT_GET_LEDCODE_LONG_EN || _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
     wdt_reset();
     wdt_disable();
+    Command_Finit();
     Led_Init();
+    
+#if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
+    uint8_t count = 0;
+#endif
     for (;;) {
+#if _CONFIG_ABORT_GET_LEDCODE_LONG_EN
         Led_SetAll(&BuiltinPallet[BuiltInPallet_Black]);
         Led_Update();
-        Time_Sleep(250);
-                
+        Time_Sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
         Led_SetMasked(0, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<3)&LedColorMask_RGB);
         Led_SetMasked(1, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<2)&LedColorMask_RGB);
         Led_SetMasked(2, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<1)&LedColorMask_RGB);
         Led_SetMasked(3, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<0)&LedColorMask_RGB);
         Led_Update();
-        Time_Sleep(750);
+        Time_Sleep(CONFIG_ABORT_LEDCODE_TIMER_HI);
+#elif _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
+        Led_SetAll(&BuiltinPallet[BuiltInPallet_Black]);
+        Led_Update();
+        Time_Sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
+        Led_SetAll(&BuiltinPallet[BuiltInPallet_Red]);
+        Led_Update();
+        Time_Sleep(_CONFIG_ABORT_LEDCODE_TIMER_HI);
+#endif
         
+#if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
+        if (count >= _CONFIG_ABORT_GET_LEDCODE_COUNT) {
+            break;
+        }
+        count ++;
+#endif
     }
+#endif
+    
+#if _CONFIG_ABORT_GET_LEDCODE_RESTART
+    ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
 #else
     for (;;);
 #endif
+}
+
+void Sys_Restart() {
+    ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
 }
 
 int main () {
@@ -150,13 +195,3 @@ void Sys_Init() {
     //LVL1VEC 23; 
     CPUINT.LVL1VEC = 0x17;
 }
-
-#if 0
-static void
-__attribute__ ((naked))
-__attribute__ ((section (".init1")))    /* run this right before main */
-__attribute__ ((unused))    /* Kill the unused function warning */
-stack_init(void) {
-    
-}
-#endif

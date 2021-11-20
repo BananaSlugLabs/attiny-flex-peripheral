@@ -56,6 +56,9 @@ typedef struct {
     uint8_t     state;
     uint8_t     index;
     uint8_t     total;
+#if CONFIG_LED_OPTIMIZE_SIZE
+    bool        virq;
+#endif
 } LedState;
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
@@ -73,7 +76,59 @@ const const LedColor BuiltinPallet[BuiltInPallet_MAX] = {
     {.r = 0, .g = 0, .b = CONFIG_LED_B_INTENSITY}
 };
 
+#if CONFIG_LED_OPTIMIZE_SIZE
+#if 0
+#define LED_ISR_TXC() void virt_USART0_TXC_vect ()
+#define LED_ISR_DRE() void virt_USART0_DRE_vect ()
+
+void virt_USART0_TXC_vect ();
+void virt_USART0_DRE_vect ();
+
 ISR(USART0_TXC_vect) {
+    virt_USART0_TXC_vect();
+}
+
+ISR(USART0_DRE_vect) {
+    virt_USART0_DRE_vect();
+}
+#endif
+#endif
+
+#if CONFIG_LED_OPTIMIZE_SIZE
+// While less efficient, this will simulate the interrupts in the Led_Update
+// rather than reimplementing the as a more traditional polled loop.
+// 
+// It would be even more fun if I was able to use the interrupt controller to
+// decide between RETI/RET returns.
+void ISR_Led_TXC ();
+void ISR_Led_DRE ();
+#define LED_IRQ_ATTR ISR_NAKED
+#else
+#define LED_IRQ_ATTR ISR_BLOCK
+#endif
+
+ISR(USART0_TXC_vect) {
+#if CONFIG_LED_OPTIMIZE_SIZE
+    /*
+    asm("push	r1 \n"
+        "push	r0 \n"
+        "in	r0, 0x3f \n"
+        "push	r0 \n"
+        "eor	r1, r1 \n"
+        "push	r24\n");
+     */
+    
+    ISR_Led_TXC();
+    
+    /*asm("pop	r24 \n"
+        "pop	r0 \n"
+        "out	0x3f, r0 \n"
+        "push	r0 \n"
+        "pop	r1\n");
+    reti();*/
+}
+void ISR_Led_TXC () {
+#endif
     switch (Led.state) {
         case LED_STATE_RESET_DONE:
             Led.index       = 0;
@@ -103,6 +158,31 @@ ISR(USART0_TXC_vect) {
 }
 
 ISR(USART0_DRE_vect) {
+#if CONFIG_LED_OPTIMIZE_SIZE
+    /*asm("push	r1 \n"
+        "push	r0 \n"
+        "in	r0, 0x3f \n"
+        "push	r0 \n"
+        "eor	r1, r1 \n"
+        "push	r24 \n"
+        "push	r25 \n"
+        "push	r30 \n"
+        "push	r31 \n");*/
+    
+    ISR_Led_DRE();
+    
+    /*asm("pop	r31 \n"
+        "push	r30 \n"
+        "push	r25 \n"
+        "push	r24 \n"
+        "pop	r0 \n"
+        "out	0x3f, r0 \n"
+        "push	r0 \n"
+        "pop	r1 \n");
+    reti();*/
+}
+void ISR_Led_DRE () {
+#endif
     switch (Led.state) {
         case LED_STATE_STREAM_PIXEL:
             USART0.TXDATAL = Bus_RegisterFile.led_data.raw[Led.index];
@@ -285,6 +365,17 @@ void Led_Update() {
     if (SREG & CPU_I_bm) {
             USART0.CTRLA = USART_DREIE_bm;
     } else {
+#if CONFIG_LED_OPTIMIZE_SIZE
+        // Simulate Interrupts through polling...
+        USART0.CTRLA = USART_DREIE_bm;
+        while (USART0.CTRLA & (USART_TXCIE_bm | USART_DREIE_bm)) {
+            if ((USART0.CTRLA & USART_DREIE_bm) && (USART0.STATUS & USART_DREIF_bm)) {
+                ISR_Led_DRE();
+            } else if ((USART0.CTRLA & USART_TXCIE_bm) && (USART0.STATUS & USART_TXCIF_bm)) {
+                ISR_Led_TXC();
+            }
+        }
+#else
         for (Led.index = 0; Led.index < LED_RESET_LENGTH; Led.index ++) {
             while (!(USART0.STATUS & USART_DREIF_bm));
             USART0.TXDATAL = 0;
@@ -318,6 +409,7 @@ void Led_Update() {
 
         Led.state = LED_STATE_IDLE;
         Bus_RegisterFile.led_config.busy = false;
+#endif
     }
 }
 
