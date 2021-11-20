@@ -3,8 +3,6 @@
 
 static volatile SysAbortCode sys_fault;
 
-void Sys_EnterFaultMode();
-
 ISR(BADISR_vect) {
     Sys_Abort(SysAbortBadIRQ);
 }
@@ -49,29 +47,19 @@ void Sys_Abort(SysAbortCode code) {
     }
 }
 
-
-bool Sys_IsFaultMode() {
-    return sys_fault != SysAbortNone;
-}
-
 int main () {
-    Sys_EarlyInit();
-    ENABLE_INTERRUPTS();
     Sys_Init();
+    ENABLE_INTERRUPTS();
     while(1) {
         Sys_Loop();
     }
 }
 
-void Sys_EarlyInit() {
+void Sys_Init() {
     SYSTEM_Initialize();
     Time_Init();
     Led_Init();
     Command_Init();
-}
-
-void Sys_Init() {
-    
 }
 
 void Sys_Loop() {

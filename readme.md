@@ -45,3 +45,20 @@ Can support as many LEDs as memory will permit in theory, however, the current
 limitation tops off at ~70 LEDs. It is possible to increase this value, but
 given the memory constraints I considered it a trade off that allowed for
 optimization.
+
+
+## Register File
+
+```
+Command:    Device Info (0)
+    1       Device ID (0x
+
+Command:    WriteLED (1)
+
+    1       LED Index (0xFF -> Set All)
+    2       R
+    3       G
+    4       B
+
+Command:
+```

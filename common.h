@@ -13,8 +13,7 @@
 #include <util/atomic.h>
 
 #define CONFIG_LED_COUNT            4
-#define CONFIG_LED_PALLET           16
-#define CONFIG_TIMERS_COUNT         8
+#define CONFIG_TWI_ADDR_DEFAULT     82
     
 #ifndef DISABLE_INTERRUPTS
 #define DISABLE_INTERRUPTS()   __disable_interrupt();
@@ -106,6 +105,23 @@ extern "C" {
     void Persist_Get(PersistRecord rec, void* info, size_t size);
     void Persist_Set(PersistRecord rec, void* info, size_t size);
 
+    
+    // **** TWI Register File ******************************************************
+    typedef struct LedControlRegisterTag {
+        bool    update : 1;
+        bool    busy   : 1;
+    } LedControlRegister;
+    
+    typedef struct RegisterFileTag {
+        LedControlRegister led_config;
+        uint8_t            _reserved[3];
+        union {
+            LedColor colors [CONFIG_LED_COUNT];
+            uint8_t  raw[CONFIG_LED_COUNT*sizeof(LedColor)];
+        } led_data;
+    } RegisterFile;
+    
+    extern RegisterFile Bus_RegisterFile;
     
 #ifdef	__cplusplus
 }

@@ -15,7 +15,7 @@ void Time_Init() {
     RTC.PER = 0xFFFF;
 
     //CMP disabled; OVF enabled; 
-    RTC.INTCTRL = 0x01;
+    RTC.INTCTRL = 0x00;
 
     //Clock selection
     RTC.CLKSEL = 0x00;

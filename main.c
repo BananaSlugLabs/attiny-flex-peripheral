@@ -2,9 +2,9 @@
 #include "common.h"
 
 void App_Task () {
+#if 0
     static uint8_t i = 0;
     static uint8_t seq = 0;
-    
     if (!Led_IsBusy()) {
     
         if (i == 0) {
@@ -19,9 +19,11 @@ void App_Task () {
         c.r=(seq & 1) ? i : 0;
         c.g=(seq & 2) ? i : 0;
         c.b=(seq & 4) ? i : 0;
-
+        
         Led_SetAll(c);
-        //Time_Sleep(10);
+        
+        Time_Sleep(10);
         i++;
     }
+#endif
 }

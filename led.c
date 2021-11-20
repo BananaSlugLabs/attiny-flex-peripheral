@@ -46,37 +46,31 @@
 #define LED_BAUD(BAUD_RATE) (((float)(F_CPU * 64) / (2 * (float)BAUD_RATE)) + 0.5)
 #define LED_RESET_LENGTH 100
 
-
 #define LED_STATE_IDLE                  0
-#define LED_STATE_CHANGED               1
-#define LED_STATE_RESET                 2
-#define LED_STATE_RESET_DONE            3
+#define LED_STATE_RESET                 1
+#define LED_STATE_RESET_DONE            2
 #define LED_STATE_STREAM_PIXEL          3
 #define LED_STATE_STREAM_PIXEL_DONE     4
 
-typedef union LedBufferTag {
-    LedColor colors [CONFIG_LED_COUNT];
-    uint8_t  raw[CONFIG_LED_COUNT*sizeof(LedColor)];
-} LedBuffer;
 
 typedef struct {
     uint8_t     state;
     uint8_t     index;
 } LedState;
 
-static LedBuffer Led_Buffer;
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
-
 
 ISR(USART0_TXC_vect) {
     switch (Led.state) {
         case LED_STATE_RESET_DONE:
             Led.index       = 0;
             USART0.STATUS   = USART_TXCIF_bm;
-            USART0.CTRLA    = USART_DREIE_bm; // Switch to DRE IRQ
             CCL.LUT0CTRLA   |= CCL_ENABLE_bm;
             TCB0.CTRLA      |= TCB_ENABLE_bm;
             Led.state       = LED_STATE_STREAM_PIXEL;
+            USART0.CTRLA    = USART_DREIE_bm; // Switch to DRE IRQ
+            // Note: Annoyingly, the high priority DRE interrupt is fired immediately due to high priority
+            // Need to see if there is a workaround to prevent this from happening -- could pre-fill USART0.TXDATAL buffers?
             return;
             
         case LED_STATE_STREAM_PIXEL_DONE:
@@ -87,6 +81,7 @@ ISR(USART0_TXC_vect) {
             USART0.CTRLA    = 0;
             USART0.CTRLB    &= ~USART_TXEN_bm;
             Led.state       = LED_STATE_IDLE;
+            Bus_RegisterFile.led_config.busy = false;
             return;
         default:
             DEBUG_BREAKPOINT();
@@ -97,9 +92,9 @@ ISR(USART0_TXC_vect) {
 ISR(USART0_DRE_vect) {
     switch (Led.state) {
         case LED_STATE_STREAM_PIXEL:
-            USART0.TXDATAL = Led_Buffer.raw[Led.index];
+            USART0.TXDATAL = Bus_RegisterFile.led_data.raw[Led.index];
             Led.index ++;
-            if (Led.index == sizeof(Led_Buffer.raw)) {
+            if (Led.index == sizeof(Bus_RegisterFile.led_data.raw)) {
                 USART0.CTRLA    = USART_TXCIE_bm; // switch to TXC IRQ
                 Led.state       = LED_STATE_STREAM_PIXEL_DONE;
             }
@@ -146,33 +141,35 @@ void Led_Init() {
     USART0.RXPLCTRL = 0x00;
     USART0.TXPLCTRL = 0x00;
     
-    Led.state = LED_STATE_CHANGED;
+    Led.state = LED_STATE_IDLE;
     Led.index = 0;
     
     // **** Misc Initialization ************************************************
-    
+    LedColor c = {0x80,0x80,0x80};
+    Led_SetAll(c);
+    Bus_RegisterFile.led_config.update = true;
 }
 
 void Led_SetAll(LedColor color){
     for (int i = 0; i < CONFIG_LED_COUNT; i ++){
-        Led_Buffer.colors[i] = color;
+        Bus_RegisterFile.led_data.colors[i] = color;
     }
     if (Led.state == LED_STATE_IDLE) {
-        Led.state = LED_STATE_CHANGED;
+        Bus_RegisterFile.led_config.update = true;
     }
 }
 
 void Led_Set(uint16_t index, LedColor color) {
     if (index < CONFIG_LED_COUNT) {
-        Led_Buffer.colors[index] = color;
+        Bus_RegisterFile.led_data.colors[index] = color;
     }
     if (Led.state == LED_STATE_IDLE) {
-        Led.state = LED_STATE_CHANGED;
+        Bus_RegisterFile.led_config.update = true;
     }
 }
 
 bool Led_IsBusy() {
-    return Led.state > LED_STATE_CHANGED;
+    return Led.state > LED_STATE_IDLE;
 }
 
 void Led_Update() {
@@ -180,6 +177,8 @@ void Led_Update() {
         return;
     }
     
+    Bus_RegisterFile.led_config.busy = true;
+    Bus_RegisterFile.led_config.update = false;
     Led.state = LED_STATE_RESET;
     
     // Disable CCL Output, Timer, and clear USART Transmit Done Flag
@@ -208,8 +207,8 @@ void Led_Update() {
         TCB0.CTRLA |= TCB_ENABLE_bm;
 
         // Iterate through each pixel and send when buffered register is set.
-        uint8_t* buf = Led_Buffer.raw;
-        for (Led.index = 0; Led.index < sizeof(Led_Buffer.raw); Led.index++) {
+        uint8_t* buf = Bus_RegisterFile.led_data.raw;
+        for (Led.index = 0; Led.index < sizeof(Bus_RegisterFile.led_data.raw); Led.index++) {
             while (!(USART0.STATUS & USART_DREIF_bm));
             USART0.TXDATAL = buf[Led.index];
         }
@@ -224,11 +223,12 @@ void Led_Update() {
         Led.state       = LED_STATE_IDLE;
 
         Led.state = LED_STATE_IDLE;
+        Bus_RegisterFile.led_config.busy = false;
     }
 }
 
 void Led_Task() {
-    if (Led.state == LED_STATE_CHANGED) {
+    if (Bus_RegisterFile.led_config.update) {
         Led_Update();
     }
 }
