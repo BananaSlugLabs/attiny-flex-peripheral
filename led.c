@@ -57,9 +57,6 @@ typedef struct {
     uint8_t     state;
     uint8_t     index;
     uint8_t     total;
-#if CONFIG_LED_OPTIMIZE_SIZE
-    bool        virq;
-#endif
 } LedState;
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
@@ -76,24 +73,6 @@ const const LedColor BuiltinPallet[BuiltInPallet_MAX] = {
     //Pallet_Blue
     {.r = 0, .g = 0, .b = CONFIG_LED_B_INTENSITY}
 };
-
-#if CONFIG_LED_OPTIMIZE_SIZE
-#if 0
-#define LED_ISR_TXC() void virt_USART0_TXC_vect ()
-#define LED_ISR_DRE() void virt_USART0_DRE_vect ()
-
-void virt_USART0_TXC_vect ();
-void virt_USART0_DRE_vect ();
-
-ISR(USART0_TXC_vect) {
-    virt_USART0_TXC_vect();
-}
-
-ISR(USART0_DRE_vect) {
-    virt_USART0_DRE_vect();
-}
-#endif
-#endif
 
 #if CONFIG_LED_OPTIMIZE_SIZE
 // While less efficient than the run of the mill polled implementation,
@@ -197,16 +176,6 @@ ISR(USART0_DRE_vect) {
 #endif
 }
 
-#if CONFIG_LED_OPTIMIZE_SIZE
-/*
-void ISR_Led_TXC () {
-    asm volatile("jmp USART0_TXC_vect_START");
-}
-void ISR_Led_DRE () {
-    asm volatile("jmp USART0_DRE_vect_START");
-}
- */
-#endif
 void Led_Init() {
     
     // **** IO Configuration ***************************************************
