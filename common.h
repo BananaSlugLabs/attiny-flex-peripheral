@@ -17,6 +17,7 @@
 //#include "mcc_generated_files/mcc.h"
 #include <util/atomic.h>
 #include <avr/cpufunc.h>
+#include "firmware.h"
 
 #define DISABLE_INTERRUPTS()   cli()
 #define ENABLE_INTERRUPTS()    sei()
@@ -49,7 +50,7 @@ extern "C" {
     void Sys_EarlyInit();
     void Sys_Init();
     void Sys_Loop();
-    void Sys_Abort(SysAbortCode code);
+    void Sys_Abort(SysAbortCode code) __attribute__((noreturn));
     void Sys_Restart();
     bool Sys_IsFaultMode();
     
@@ -96,12 +97,12 @@ extern "C" {
         BuiltInPallet_Black, BuiltInPallet_White, BuiltInPallet_Red, BuiltInPallet_Green, BuiltInPallet_Blue, BuiltInPallet_MAX
     } BuiltInPallet;
     
-    extern const const LedColor BuiltinPallet[BuiltInPallet_MAX];
+    extern const LedColor BuiltinPallet[BuiltInPallet_MAX];
     
     void Led_Init();
-    void Led_Set(uint8_t index, const const LedColor* color);
-    void Led_SetMasked(uint8_t index, const const LedColor* colorA, const const LedColor* colorB, LedColorMask mask);
-    void Led_SetAll(const const LedColor* color);
+    void Led_Set(uint8_t index, const LedColor* color);
+    void Led_SetMasked(uint8_t index, const LedColor* colorA, const LedColor* colorB, LedColorMask mask);
+    void Led_SetAll(const LedColor* color);
     bool Led_IsBusy();
     void Led_Update();
     void Led_Task();
@@ -126,24 +127,42 @@ extern "C" {
 
     
     // **** TWI Register File ******************************************************
-    typedef struct LedRegisterStatusATag {
+    enum PixelKindTag {
+        LedKindWS2812         = 1,
+    };
+    typedef uint8_t LedKind;
+    
+    enum PixelFormatTag {
+        LedFormatGRB888       = 1
+    };
+    typedef uint8_t LedFormat;
+    typedef uint8_t LedCount;
+    
+    typedef struct LedRegisterControlATag {
         bool    update      : 1;
         bool    busy        : 1;
-        uint8_t _r0         : 2;
-        uint8_t count       : 4;
     } LedRegisterControlA;
     
+    typedef struct FirmwareRegisterFileTag {
+        uint16_t        ident;                                                  // 0..1
+        uint8_t         version;                                                // 2
+        uint8_t         led_maximum;                                            // 3
+        LedKind         led_kind;                                               // 4
+        LedFormat       led_format;                                             // 5
+        uint16_t        _r1;                                                    // 6..7
+    } FirmwareRegisterFile;
+    
     typedef struct RegisterFileTag {
-        LedRegisterControlA     led_config;
-        uint8_t                 led_count;
-        uint8_t                 _reserved[2];
+        LedCount                led_count;                                      // 8
+        LedRegisterControlA     led_config;                                     // 9
         union {
-            LedColor colors [CONFIG_LED_COUNT];
+            LedColor colors [CONFIG_LED_COUNT];                                 // 10+
             uint8_t  raw[CONFIG_LED_COUNT*sizeof(LedColor)];
         } led_data;
     } RegisterFile;
     
-    extern RegisterFile Bus_RegisterFile;
+    extern RegisterFile                 Bus_RegisterFile;
+    extern const FirmwareRegisterFile   Bus_FirmwareRegisterFile;
     
 #ifdef	__cplusplus
 }

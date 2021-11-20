@@ -56,12 +56,12 @@
 typedef struct {
     uint8_t     state;
     uint8_t     index;
-    uint8_t     total;
+    LedCount    total;
 } LedState;
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
 
-const const LedColor BuiltinPallet[BuiltInPallet_MAX] = {
+const LedColor BuiltinPallet[BuiltInPallet_MAX] = {
     //Pallet_Black
     {0,0,0},
     //Pallet_White
@@ -127,7 +127,7 @@ ISR(USART0_TXC_vect) {
 #endif
 #if CONFIG_LED_OPTIMIZE_SIZE
     if (!(CPUINT.STATUS&0x3)) {
-        asm volatile("ret \n");
+        asm volatile("ret");
     }
 #endif
 }
@@ -171,24 +171,12 @@ ISR(USART0_DRE_vect) {
 #endif
 #if CONFIG_LED_OPTIMIZE_SIZE
     if (!(CPUINT.STATUS&0x3)) {
-        asm volatile("ret \n");
+        asm volatile("ret");
     }
 #endif
 }
 
 void Led_Init() {
-    
-    // **** IO Configuration ***************************************************
-    
-    // TODO: This code belongs somewhere else, but MCC would not allow me to
-    // configure as I wished.
-    
-    // Ensure XCK is enabled for output
-    //PORTA_DIRSET = 1<<3;
-    
-    // Ensure USART uses the alternate port.
-    //PORTMUX.CTRLB |= PORTMUX_USART0_ALTERNATE_gc;
-    
     // *************************************************************************
     // **** Event System Configuration *****************************************
 	EVSYS.ASYNCCH0 = 0x0D;
@@ -279,15 +267,17 @@ void Led_Init() {
     
     Led.state = LED_STATE_IDLE;
     Led.index = 0;
-    Led.total = sizeof(Bus_RegisterFile.led_data.raw);
-
+    Led.total = 0;
+    Led_SetAll(&BuiltinPallet[BuiltInPallet_White]);
+    Bus_RegisterFile.led_count          = CONFIG_LED_COUNT;
+    Bus_RegisterFile.led_config.busy    = false;
+    Bus_RegisterFile.led_config.update  = true;
+    
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.DIR |= (1<<CONFIG_LED_IRQ_PIN);
     CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
 #endif
     
-    Led_SetAll(&BuiltinPallet[BuiltInPallet_White]);
-    Bus_RegisterFile.led_config.update = true;
 }
 
 void Led_SetAll(const LedColor* color){
@@ -309,7 +299,7 @@ void Led_SetMasked(uint8_t index, const LedColor* colorA, const LedColor* colorB
     Bus_RegisterFile.led_config.update = true;
 }
 
-void Led_Set(uint8_t index, const const LedColor* color) {
+void Led_Set(uint8_t index, const LedColor* color) {
     if (index < CONFIG_LED_COUNT) {
         Bus_RegisterFile.led_data.colors[index] = *color;
     }
@@ -325,8 +315,14 @@ void Led_Update() {
         return;
     }
     
-    Bus_RegisterFile.led_config.busy = true;
-    Bus_RegisterFile.led_config.update = false;
+    Bus_RegisterFile.led_config.busy        = true;
+    Bus_RegisterFile.led_config.update      = false;
+    if ( Bus_RegisterFile.led_count == 0 ) {
+        // nothing to do...
+        Bus_RegisterFile.led_config.busy    = false;
+        return;
+    }
+    Led.total = Bus_RegisterFile.led_count * sizeof(LedColor);
     Led.state = LED_STATE_RESET;
     
     // Disable CCL Output, Timer, and clear USART Transmit Done Flag
@@ -367,7 +363,7 @@ void Led_Update() {
 
         // Iterate through each pixel and send when buffered register is set.
         uint8_t* buf = Bus_RegisterFile.led_data.raw;
-        for (Led.index = 0; Led.index < sizeof(Bus_RegisterFile.led_data.raw); Led.index++) {
+        for (Led.index = 0; Led.index < Led.total; Led.index++) {
             while (!(USART0.STATUS & USART_DREIF_bm));
             USART0.TXDATAL = buf[Led.index];
         }

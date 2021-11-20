@@ -18,10 +18,6 @@ extern "C" {
 // *****************************************************************************
 // **** System *****************************************************************
     
-/**
- * Reserve exclusive stack.
- */
-#define CONFIG_RESERVE_STACK                    32
     
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -29,7 +25,7 @@ extern "C" {
 /**
  * Maximum LEDs to support.
  */
-#define CONFIG_LED_COUNT                        4
+#define CONFIG_LED_COUNT                        24
     
 /**
  * Uses the body of the interrupt handler to implement a pseudo interrupt when
@@ -56,7 +52,7 @@ extern "C" {
  * in the EEPROM.
  */
 #define CONFIG_TWI_ADDR_DEFAULT                 82
-#define CONFIG_TWI_BUS                          DEF_DISABLE
+#define CONFIG_TWI_BUS                          DEF_ENABLE
 
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -150,7 +146,7 @@ extern "C" {
  */
 #define DEF_TEST_PATTERN_TYPE_UNIFORM_FADE      2
     
-#define CONFIG_TEST_PATTERN                     DEF_TEST_PATTERN_TYPE_UNIFORM_FADE
+#define CONFIG_TEST_PATTERN                     DEF_DISABLE
 #define CONFIG_TEST_PATTERN_TIMESTEP            0
 
 /**
@@ -164,8 +160,6 @@ extern "C" {
 #if CONFIG_LED_IRQ_PERF && (!defined(CONFIG_LED_IRQ_PORT) || !defined(CONFIG_LED_IRQ_PIN))
 #error "Missing IRQ Port/Pin configuration for performance measurements."
 #endif
-    
-    
 
 #ifdef	__cplusplus
 }
