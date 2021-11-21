@@ -22,7 +22,6 @@ ISR(CRCSCAN_NMI_vect) {
 #else
 #define _CONFIG_ABORT_LEDCODE_TIMER_LO CONFIG_ABORT_LEDCODE_TIMER_LO
 #endif
-void Sys_AbortInternal(SysAbortCode code);
 
 void Sys_Abort(SysAbortCode code) {
     DISABLE_INTERRUPTS();

@@ -143,6 +143,18 @@ extern "C" {
         bool    busy        : 1;
     } LedRegisterControlA;
     
+    enum PersistKeyTag {
+        PersistKeyValue       = 0x9C
+    };
+    typedef uint8_t PersistKey;
+    
+    typedef struct PersistControlTag {
+        bool    saveLed     : 1;
+        bool    storeAddr   : 1;
+        bool    reload      : 1;
+        bool    busy        : 1;
+    } PersistControl;
+    
     typedef struct FirmwareRegisterFileTag {
         uint16_t        ident;                                                  // 0..1
         uint8_t         version;                                                // 2
@@ -153,12 +165,18 @@ extern "C" {
     } FirmwareRegisterFile;
     
     typedef struct RegisterFileTag {
-        LedCount                led_count;                                      // 8
-        LedRegisterControlA     led_config;                                     // 9
+        PersistControl          persistControl;                                 // 8
+        PersistKey              persistKey;                                     // 9
+        uint8_t                 deviceAddress;                                  // 10
+        uint8_t                 _r2;                                            // 11
+        uint32_t                _r3;                                            // 12..15
+        LedCount                led_count;                                      // 16
+        LedRegisterControlA     led_config;                                     // 17
         union {
-            LedColor colors [CONFIG_LED_COUNT];                                 // 10+
+            LedColor colors [CONFIG_LED_COUNT];                                 // 18..(18 + (CONFIG_LED_COUNT*3)) - 1
             uint8_t  raw[CONFIG_LED_COUNT*sizeof(LedColor)];
         } led_data;
+        
     } RegisterFile;
     
     extern RegisterFile                 Bus_RegisterFile;

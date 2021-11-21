@@ -14,28 +14,36 @@
  *   [0x52 0x05 [0x53 r:1] -> LED Format           (0x1 GRB888)
  *   [0x52 0x00 [0x53 r:6]
  * 
+ * Set I2C Addr:
+ *         Addr I2cAddr (Originally 0x82)
+ *   [0x52 0x0A 0x50]
+ * 
  * Set LEDs:
  *         Addr White          Green           Red            Blue
- *   [0x52 0x0A 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF]
+ *   [0x52 0x12 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF]
  * 
  * Set Update bit in LED Control Register:
  *         Addr Upd
- *   [0x52 0x09 0x01]
+ *   [0x52 0x11 0x01]
  * 
  * Set LED Count:
  *         Addr Cnt
- *   [0x52 0x08 0x02]
+ *   [0x52 0x10 0x02]
  * 
  * Set LED Count & Update:
  *         Addr Cnt  Upd
- *   [0x52 0x08 0x03 0x1]
+ *   [0x52 0x10 0x03 0x1]
  * 
  * Read LED Contents:
- *   [0x52 0x08 [0x53 r:32]]
+ *   [0x52 0x12 [0x53 r:32]]
  * 
  * And together...
  *         Addr LED Data....................................................        Addr Cnt  Upd
- *   [0x52 0x0A 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF] [0x52 0x08 0x04 0x1]
+ *   [0x52 0x12 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF] [0x52 0x10 0x04 0x1]
+ * 
+ * 
+ *   [0x52 0x0A 0x80]
+ *   [0x50 0x12 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF] [0x50 0x10 0x04 0x1]
  */
 
 typedef enum BusStateTag {
@@ -72,13 +80,13 @@ static BusState                 Bus_State = BusIdle;
 #define TWI_STATUS_ADDR(s)      (((s) & (TWI_APIF_bm|TWI_AP_bm)) == (TWI_APIF_bm|TWI_AP_bm))
 #define TWI_STATUS_STOP(s)      (((s) & (TWI_APIF_bm|TWI_AP_bm)) == (TWI_APIF_bm))
 #endif
+
 ISR(TWI0_TWIS_vect) {
     uint8_t s = TWI0.SSTATUS;
 
     if (s & TWI_APIF_bm) {
         if (s & TWI_AP_bm) {
             TWI0.SCTRLB = TWI_CMD_ACK;
-            uint8_t tmp = TWI0.SDATA; 
             Bus_State = BusSetIndexOrReadIncrement;
         } else {
             TWI0.SCTRLB = TWI_CMD_DONE;
@@ -104,6 +112,7 @@ ISR(TWI0_TWIS_vect) {
             }
             TWI0.SDATA = val; 
             TWI0.SCTRLB = TWI_CMD_ACK;
+            Bus_State = BusReadOrWriteIncrement;
         } else {
             // ************ Controller Write ***************************************
             if (Bus_State == BusSetIndexOrReadIncrement) {
@@ -139,7 +148,7 @@ void Command_Init() {
     TWI0.SADDRMASK = 0x00;
     
     //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
-    TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_ENABLE_bm;
+    TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
     
     //ACKACT ACK; SCMD NOACT; 
     TWI0.SCTRLB = 0x00;
@@ -154,10 +163,25 @@ void Command_Init() {
 
 void Command_Finit() {
 #if CONFIG_TWI_BUS
-    TWI0.SCTRLA = 0;
+    TWI0.SCTRLA &= ~TWI_ENABLE_bm;
 #endif
 }
 
 void Command_Task() {
-    
+#if CONFIG_TWI_BUS
+    if (Bus_RegisterFile.deviceAddress != 0) {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            if (Bus_State == BusIdle && TWI0.SADDR != Bus_RegisterFile.deviceAddress) {
+                TWI0.CTRLA = 0x00;
+                TWI0.SCTRLA &= ~TWI_ENABLE_bm;
+                TWI0.SADDR = Bus_RegisterFile.deviceAddress;
+                TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
+                TWI0.SCTRLB = 0x00;
+                TWI0.SDATA = 0x00;
+                TWI0.SSTATUS = 0x00;
+                TWI0.SCTRLA |= TWI_ENABLE_bm;
+            }
+        }
+    }
+#endif
 }
