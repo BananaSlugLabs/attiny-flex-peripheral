@@ -1,4 +1,5 @@
-#include "common.h"
+#include "led.h"
+#include "bus.h"
 #include <avr/cpufunc.h>
 
 /**
@@ -44,8 +45,8 @@
  *     - Disable CCL, TCB, USART
  */
 
-#define LED_BAUD(BAUD_RATE) (((float)(F_CPU * 64) / (2 * (float)BAUD_RATE)) + 0.5)
-#define LED_RESET_LENGTH 100
+#define LED_BAUD(BAUD_RATE)             (((float)(F_CPU * 64) / (2 * (float)BAUD_RATE)) + 0.5)
+#define LED_RESET_LENGTH                100
 
 #define LED_STATE_IDLE                  0
 #define LED_STATE_RESET                 1
@@ -53,15 +54,24 @@
 #define LED_STATE_STREAM_PIXEL          3
 #define LED_STATE_STREAM_PIXEL_DONE     4
 
+static void led_init();
+static void led_finit();
+void led_task (message_t message, MessageData data);
+
+PRIVATE_TASK_DEFINE(led_task, 4);
+
 typedef struct {
     uint8_t     state;
     uint8_t     index;
-    LedCount    total;
+    uint8_t     total;
 } LedState;
+
+led_registerfile_t Led_RegisterFile;
+BUS_REGISTER_FILE(Led_RegisterFile, 1, Bus_FlagReadWrite);
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
 
-const LedColor BuiltinPallet[BuiltInPallet_MAX] = {
+const Led_Color Led_ColorPallet[Led_ColorIndexMax] = {
     //Pallet_Black
     {0,0,0},
     //Pallet_White
@@ -115,7 +125,7 @@ ISR(USART0_TXC_vect) {
             USART0.CTRLA    = 0;
             USART0.CTRLB    &= ~USART_TXEN_bm;
             Led.state       = LED_STATE_IDLE;
-            Bus_RegisterFile.led_config.busy = false;
+            Led_RegisterFile.led_config.busy = false;
             break;
             
         default:
@@ -145,7 +155,7 @@ ISR(USART0_DRE_vect) {
 #endif
     switch (Led.state) {
         case LED_STATE_STREAM_PIXEL:
-            USART0.TXDATAL = Bus_RegisterFile.led_data.raw[Led.index];
+            USART0.TXDATAL = Led_RegisterFile.led_data.raw[Led.index];
             Led.index ++;
             if (Led.index == Led.total) {
                 USART0.CTRLA    = USART_TXCIE_bm; // switch to TXC IRQ
@@ -176,7 +186,7 @@ ISR(USART0_DRE_vect) {
 #endif
 }
 
-void Led_Init() {
+static void led_init() {
     // *************************************************************************
     // **** Event System Configuration *****************************************
 	EVSYS.ASYNCCH0 = 0x0D;
@@ -268,10 +278,11 @@ void Led_Init() {
     Led.state = LED_STATE_IDLE;
     Led.index = 0;
     Led.total = 0;
-    Led_SetAll(&BuiltinPallet[BuiltInPallet_White]);
-    Bus_RegisterFile.led_count          = CONFIG_LED_COUNT;
-    Bus_RegisterFile.led_config.busy    = false;
-    Bus_RegisterFile.led_config.update  = true;
+    
+    led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
+    Led_RegisterFile.led_count          = CONFIG_LED_COUNT;
+    Led_RegisterFile.led_config.busy    = false;
+    Led_RegisterFile.led_config.update  = true;
     
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.DIR |= (1<<CONFIG_LED_IRQ_PIN);
@@ -280,49 +291,55 @@ void Led_Init() {
     
 }
 
-void Led_SetAll(const LedColor* color){
-    for (int i = 0; i < CONFIG_LED_COUNT; i ++){
-        Bus_RegisterFile.led_data.colors[i] = *color;
-    }
-    Bus_RegisterFile.led_config.update = true;
+static void led_finit() {
+    CCL.LUT0CTRLA   = 0;
+    TCB0.CTRLA      = 0;
+    USART0.CTRLB    = 0;
 }
 
-void Led_SetMasked(uint8_t index, const LedColor* colorA, const LedColor* colorB, LedColorMask mask) {
+void led_setAll(const Led_Color* color){
+    for (int i = 0; i < CONFIG_LED_COUNT; i ++){
+        Led_RegisterFile.led_data.colors[i] = *color;
+    }
+    Led_RegisterFile.led_config.update = true;
+}
+
+void led_setMasked(uint8_t index, const Led_Color* colorA, const Led_Color* colorB, Led_ColorMask mask) {
     if (index < CONFIG_LED_COUNT) {
-        if (mask & LedColorMask_RGB) {
+        if (mask & Led_ColorMaskAll) {
             mask = 0xF;
         }
-        Bus_RegisterFile.led_data.colors[index].r = mask & 1 ? colorB->r : colorA->r;
-        Bus_RegisterFile.led_data.colors[index].g = mask & 2 ? colorB->g : colorA->g;
-        Bus_RegisterFile.led_data.colors[index].b = mask & 4 ? colorB->b : colorA->b;
+        Led_RegisterFile.led_data.colors[index].r = mask & 1 ? colorB->r : colorA->r;
+        Led_RegisterFile.led_data.colors[index].g = mask & 2 ? colorB->g : colorA->g;
+        Led_RegisterFile.led_data.colors[index].b = mask & 4 ? colorB->b : colorA->b;
     }
-    Bus_RegisterFile.led_config.update = true;
+    Led_RegisterFile.led_config.update = true;
 }
 
-void Led_Set(uint8_t index, const LedColor* color) {
+void led_set(uint8_t index, const Led_Color* color) {
     if (index < CONFIG_LED_COUNT) {
-        Bus_RegisterFile.led_data.colors[index] = *color;
+        Led_RegisterFile.led_data.colors[index] = *color;
     }
-    Bus_RegisterFile.led_config.update = true;
+    Led_RegisterFile.led_config.update = true;
 }
 
-bool Led_IsBusy() {
+bool led_isBusy() {
     return Led.state > LED_STATE_IDLE;
 }
 
-void Led_Update() {
-    if (Led_IsBusy()) {
+void led_update() {
+    if (led_isBusy()) {
         return;
     }
     
-    Bus_RegisterFile.led_config.busy        = true;
-    Bus_RegisterFile.led_config.update      = false;
-    if ( Bus_RegisterFile.led_count == 0 ) {
+    Led_RegisterFile.led_config.busy        = true;
+    Led_RegisterFile.led_config.update      = false;
+    if ( Led_RegisterFile.led_count == 0 ) {
         // nothing to do...
-        Bus_RegisterFile.led_config.busy    = false;
+        Led_RegisterFile.led_config.busy    = false;
         return;
     }
-    Led.total = Bus_RegisterFile.led_count * sizeof(LedColor);
+    Led.total = Led_RegisterFile.led_count * sizeof(Led_Color);
     Led.state = LED_STATE_RESET;
     
     // Disable CCL Output, Timer, and clear USART Transmit Done Flag
@@ -383,8 +400,20 @@ void Led_Update() {
     }
 }
 
-void Led_Task() {
-    if (Bus_RegisterFile.led_config.update) {
-        Led_Update();
+void led_task (message_t message, MessageData data) {
+    switch (message) {
+        case SystemMessage_Abort:
+        case SystemMessage_Init:
+            led_init();
+            break;
+        case SystemMessage_Finit:
+            led_finit();
+            break;
+        case SystemMessage_Loop:
+            if (Led_RegisterFile.led_config.update) {
+                led_update();
+            }
+            break;
+        default: break;
     }
 }

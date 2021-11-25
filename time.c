@@ -1,33 +1,49 @@
-#include "common.h"
+#include "sys.h"
 
-static const uint16_t       rtc_overflow_inc = 32768;
-static volatile uint32_t    rtc_boottime;
+void time_task (message_t message, MessageData data);
+PRIVATE_TASK_DEFINE(time_task, 2);
 
-void Time_Init() {
-    while (RTC.STATUS > 0) {}
-    //Compare 
-    RTC.CMP = 0x01;
+static inline time32_t time_getTime32 ();
+static inline time16_t time_getRtcTime16 ();
 
-    //Count
-    RTC.CNT = 0x00;
+static const uint16_t rtc_overflow_inc = 32768;
+static volatile uint32_t rtc_boottime;
 
-    //Period
-    RTC.PER = 0xFFFF;
+void time_task (message_t message, MessageData data) {
+    switch (message) {
+        case SystemMessage_Init:
+            while (RTC.STATUS > 0) {}
+            //Compare 
+            RTC.CMP = 0x01;
 
-    //CMP disabled; OVF enabled; 
-    RTC.INTCTRL = 0x00;
+            //Count
+            RTC.CNT = 0x00;
 
-    //Clock selection
-    RTC.CLKSEL = 0x00;
+            //Period
+            RTC.PER = 0xFFFF;
 
-    //RUNSTDBY disabled; PRESCALER DIV16; RTCEN enabled; 
-    RTC.CTRLA = RTC_PRESCALER_DIV16_gc | RTC_RTCEN_bm;//0x21;/**/
-    
-    // Wait for all register to be synchronized
-    while (RTC.PITSTATUS > 0) {} 
-    
-    //PI disabled; 
-    RTC.PITINTCTRL = 0x00;
+            //CMP disabled; OVF enabled; 
+            RTC.INTCTRL = 0x00;
+
+            //Clock selection
+            RTC.CLKSEL = 0x00;
+
+            //RUNSTDBY disabled; PRESCALER DIV16; RTCEN enabled; 
+            RTC.CTRLA = RTC_PRESCALER_DIV16_gc | RTC_RTCEN_bm;//0x21;/**/
+
+            // Wait for all register to be synchronized
+            while (RTC.PITSTATUS > 0) {} 
+
+            //PI disabled; 
+            RTC.PITINTCTRL = 0x00;
+            break;
+            
+        case SystemMessage_Loop:
+            time_getRtcTime16();
+            break;
+            
+        default: break;
+    }
 }
 
 /**
@@ -37,7 +53,7 @@ void Time_Init() {
  * @param timeOutput Current time (without adjustment)
  * @return Current ticks.
  */
-static inline Time32 Time_GetTime32 () {
+static inline time32_t time_getTime32 () {
     uint16_t c;
     uint32_t time;
     
@@ -59,7 +75,7 @@ static inline Time32 Time_GetTime32 () {
     return time + c;
 }
 
-static inline Time16 Time_GetRtcTime16 () {
+static inline time16_t time_getRtcTime16 () {
     uint16_t c;
     
     do {
@@ -77,21 +93,17 @@ static inline Time16 Time_GetRtcTime16 () {
     return c;
 }
 
-Time32 Time_Get() {
-    return Time_GetTime32();
+time32_t time_get() {
+    return time_getTime32();
 }
 
-void Time_Task() {
-    Time_GetRtcTime16();
-}
-
-Time32 Time_Sleep(TimerInterval interval) {
+time32_t time_sleep(timer_interval_t interval) {
     uint16_t start, now, delta;
     
-    start = Time_GetRtcTime16();
+    start = time_getRtcTime16();
     
     for (;;) {
-        now = Time_GetRtcTime16();
+        now = time_getRtcTime16();
         delta = now-start;
         if (delta>interval) {
             return delta;

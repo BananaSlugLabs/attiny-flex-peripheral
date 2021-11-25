@@ -1,15 +1,16 @@
-#include "common.h"
-#include "device_config.h"
+#include "sys.h"
+#include "led.h"
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 
-static volatile SysAbortCode sys_fault;
+
+static void sys_initIO();
+static void sys_init();
+
+static volatile Sys_AbortCode   sys_fault;
 
 ISR(BADISR_vect) {
-    Sys_Abort(SysAbortBadIRQ);
-}
-ISR(CRCSCAN_NMI_vect) {
-    Sys_Abort(SysAbortBadIRQ);
+    sys_abort(SysAbortBadIRQ);
 }
 
 #if !defined(CONFIG_ABORT_LEDCODE_TIMER_HI) || CONFIG_ABORT_LEDCODE_TIMER_HI <= 0
@@ -23,7 +24,7 @@ ISR(CRCSCAN_NMI_vect) {
 #define _CONFIG_ABORT_LEDCODE_TIMER_LO CONFIG_ABORT_LEDCODE_TIMER_LO
 #endif
 
-void Sys_Abort(SysAbortCode code) {
+void sys_abort(Sys_AbortCode code) {
     DISABLE_INTERRUPTS();
     
     sys_fault = code;
@@ -35,30 +36,30 @@ void Sys_Abort(SysAbortCode code) {
 #if _CONFIG_ABORT_GET_LEDCODE_LONG_EN || _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
     wdt_reset();
     wdt_disable();
-    Command_Finit();
-    Led_Init();
+    message_broadcastNow(SystemMessage_Finit, MessageData_Empty);
+    message_broadcastNow(SystemMessage_Abort, MessageData_Empty);
     
 #if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
     uint8_t count = 0;
 #endif
     for (;;) {
 #if _CONFIG_ABORT_GET_LEDCODE_LONG_EN
-        Led_SetAll(&BuiltinPallet[BuiltInPallet_Black]);
-        Led_Update();
-        Time_Sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
-        Led_SetMasked(0, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<3)&LedColorMask_RGB);
-        Led_SetMasked(1, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<2)&LedColorMask_RGB);
-        Led_SetMasked(2, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<1)&LedColorMask_RGB);
-        Led_SetMasked(3, &BuiltinPallet[BuiltInPallet_Red], &BuiltinPallet[BuiltInPallet_Blue], (code<<0)&LedColorMask_RGB);
-        Led_Update();
-        Time_Sleep(CONFIG_ABORT_LEDCODE_TIMER_HI);
+        led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
+        led_update();
+        time_sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
+        led_setMasked(0, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<3)&Led_ColorMaskAll);
+        led_setMasked(1, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<2)&Led_ColorMaskAll);
+        led_setMasked(2, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<1)&Led_ColorMaskAll);
+        led_setMasked(3, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<0)&Led_ColorMaskAll);
+        led_update();
+        time_sleep(CONFIG_ABORT_LEDCODE_TIMER_HI);
 #elif _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
-        Led_SetAll(&BuiltinPallet[BuiltInPallet_Black]);
-        Led_Update();
-        Time_Sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
-        Led_SetAll(&BuiltinPallet[BuiltInPallet_Red]);
-        Led_Update();
-        Time_Sleep(_CONFIG_ABORT_LEDCODE_TIMER_HI);
+        led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
+        led_update();
+        time_sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
+        led_setAll(&Led_ColorPallet[Led_ColorRedIndex]);
+        led_update();
+        time_sleep(_CONFIG_ABORT_LEDCODE_TIMER_HI);
 #endif
         
 #if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
@@ -76,33 +77,28 @@ void Sys_Abort(SysAbortCode code) {
     for (;;);
 }
 
-void Sys_Restart() {
+void sys_restart() {
     ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
 }
 
 int main () {
-    Sys_Init();
-    Time_Init();
-    Led_Init();
-    Command_Init();
+    sys_initIO();
+    message_broadcastNow(SystemMessage_InitIo,      MessageData_Empty);
+    sys_init();
+    message_broadcastNow(SystemMessage_EarlyInit,   MessageData_Empty);
+    message_broadcastNow(SystemMessage_Init,        MessageData_Empty);
     wdt_reset();
-    ENABLE_INTERRUPTS();
+    message_broadcastNow(SystemMessage_Start,       MessageData_Empty);
     while(1) {
-        Time_Task();
-        App_Task();
-        Led_Task();
-        Command_Task();
+#if CONFIG_MESSAGE_QUEUE > 0
+        message_dequeueAll();
+#endif
+        message_broadcastNow(SystemMessage_Loop,    MessageData_Empty);
         wdt_reset();
     }
 }
 
-void Sys_Init() {
-    // *************************************************************************
-    // ******** Watchdog Timer *************************************************
-    wdt_enable(WDTO_2S);
-    
-    // *************************************************************************
-    // ******** GPIO Controller ************************************************
+static void sys_initIO() {
 #if CONFIG_HAS_PORT_A
     for (uint8_t i = 0; i < 8; i++) {
         *((uint8_t *)&PORTA + 0x10 + i) |= 1 << PORT_PULLUPEN_bp;
@@ -147,6 +143,13 @@ void Sys_Init() {
 #if defined(CONFIG_PINMUX_D)
     PORTMUX.CTRLD = CONFIG_PINMUX_D;
 #endif
+}
+
+
+static void sys_init() {
+    // *************************************************************************
+    // ******** Watchdog Timer *************************************************
+    wdt_enable(WDTO_2S);
     
     // *************************************************************************
     // ******** Brown Out Detector *********************************************

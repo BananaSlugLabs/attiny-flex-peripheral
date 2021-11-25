@@ -17,7 +17,13 @@ extern "C" {
 
 // *****************************************************************************
 // **** System *****************************************************************
-    
+
+#define CONFIG_CLOCK                            20000000
+#define F_CPU                                   CONFIG_CLOCK
+/**
+ * Number of messages to queue. The count of messages is (1<<value). I.e. power of 2.
+ */
+#define CONFIG_MESSAGE_QUEUE                    3 
     
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -25,7 +31,7 @@ extern "C" {
 /**
  * Maximum LEDs to support.
  */
-#define CONFIG_LED_COUNT                        24
+#define CONFIG_LED_COUNT                        16
     
 /**
  * Uses the body of the interrupt handler to implement a pseudo interrupt when

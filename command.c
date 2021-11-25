@@ -1,9 +1,11 @@
-#include "common.h"
+#include "bus.h"
 
 /*
  * Example using BusPirate
  * -----------------------------------------------------------------------------
  * Note: Need clock streching patch.
+ * 
+ * [0x52 0x00 0x00 [0x53 r:2]
  * 
  * Get Info:
  *         Addr
@@ -46,26 +48,80 @@
  *   [0x50 0x12 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF] [0x50 0x10 0x04 0x1]
  */
 
-typedef enum BusStateTag {
-    BusIdle = 0,
-    BusSetIndexOrReadIncrement, // The first write after address will 
-    BusReadOrWriteIncrement
-} BusState;
+#if CONFIG_TWI_BUS
+enum PixelKindTag {
+    LedKindWS2812         = 1,
+};
+typedef uint8_t LedKind;
 
-#define Bus_RegisterFileBytes           ((uint8_t*)&Bus_RegisterFile)
-#define Bus_FirmwareRegisterFileBytes   ((const uint8_t*)&Bus_FirmwareRegisterFile)
-#define Bus_TotalRegisterFile           (sizeof(FirmwareRegisterFile)+sizeof(RegisterFile))
+enum PixelFormatTag {
+    LedFormatGRB888       = 1
+};
+typedef uint8_t LedFormat;
+typedef uint8_t LedCount;
 
-RegisterFile                    Bus_RegisterFile;
-const FirmwareRegisterFile      Bus_FirmwareRegisterFile = {
+
+enum PersistKeyTag {
+    PersistKeyValue       = 0x9C
+};
+typedef uint8_t PersistKey;
+
+typedef struct PersistControlTag {
+    bool    saveLed     : 1;
+    bool    storeAddr   : 1;
+    bool    reload      : 1;
+    bool    busy        : 1;
+} PersistControl;
+
+typedef struct FirmwareRegisterFileTag {
+    uint16_t        ident;                                                  // 0..1
+    uint8_t         version;                                                // 2
+    uint8_t         led_maximum;                                            // 3
+    LedKind         led_kind;                                               // 4
+    LedFormat       led_format;                                             // 5
+    uint16_t        _r1;                                                    // 6..7
+} device_registerfile_t;
+
+const device_registerfile_t Device_RegisterFile = {
     .ident                      = FW_IDENT,
     .version                    = FW_VERSION,
     .led_maximum                = CONFIG_LED_COUNT,
     .led_kind                   = LedKindWS2812,
     .led_format                 = LedFormatGRB888
 };
-static uint8_t                  Bus_Index = 0x00;
-static BusState                 Bus_State = BusIdle;
+
+BUS_REGISTER_FILE(Device_RegisterFile, 0, Bus_FlagReadOnly);
+
+extern const Bus_EndPoint               _RegisterFileDescriptors;
+extern const uint8_t                    _RegisterFileDescriptorsCount;
+#define RegisterFile_Get(index)         (((Bus_EndPoint*)&_RegisterFileDescriptors)[index])
+#define RegisterFile_Count()            ((uint8_t)((uintptr_t)&_RegisterFileDescriptorsCount))
+
+void bus_task (message_t message, MessageData data);
+PRIVATE_TASK_DEFINE(bus_task, 3);
+
+#define Bus_EndPointGet(index)      (&(((Bus_EndPoint*)&_Bus_RegisterFileEndPoints)[index]))
+
+typedef enum Bus_StateTag {
+    Bus_Idle                = 0,
+    Bus_ReadOrSelectEp      = 1, // The first write after address will 
+    Bus_SetAddr             = 2,
+    Bus_ReadWrite           = 3,
+    Bus_Done                = 4,
+    Bus_Error               = 5,
+} bus_state_t;
+
+enum {
+    Bus_EpMask              = 0x0F,
+    Bus_CmdMask             = 0xE0
+};
+
+static struct {
+    bus_state_t         state;
+    uint8_t             epcmd;
+    uint8_t             activeIndex;
+    Bus_EndPoint*       active;
+} Bus;
 
 #define TWI_CMD_ACK             (TWI_SCMD_RESPONSE_gc | TWI_ACKACT_ACK_gc)
 #define TWI_CMD_NACK            (TWI_SCMD_RESPONSE_gc | TWI_ACKACT_NACK_gc)
@@ -87,10 +143,10 @@ ISR(TWI0_TWIS_vect) {
     if (s & TWI_APIF_bm) {
         if (s & TWI_AP_bm) {
             TWI0.SCTRLB = TWI_CMD_ACK;
-            Bus_State = BusSetIndexOrReadIncrement;
+            Bus.state = Bus_ReadOrSelectEp;
         } else {
             TWI0.SCTRLB = TWI_CMD_DONE;
-            Bus_State = BusIdle;
+            Bus.state = Bus_Idle;
         }
         return;
     }
@@ -98,90 +154,97 @@ ISR(TWI0_TWIS_vect) {
     if (s & TWI_DIF_bm) {
         if (s & TWI_DIR_bm) {
             // ************ Controller Read ****************************************
-            if( (Bus_State == BusReadOrWriteIncrement && (s & TWI_RXACK_bm)) || Bus_Index >= Bus_TotalRegisterFile ) {
+            if( /*(Bus.state == Bus_ReadOrSelectEp && (s & TWI_RXACK_bm)) ||*/ !Bus.active || Bus.activeIndex >= Bus.active->size) {
+                DEBUG_BREAKPOINT();
                 TWI0.SCTRLB = TWI_CMD_DONE;
-                Bus_State = BusIdle;
+                Bus.state = Bus_Idle;
                 return;
             }
             
-            uint8_t val;
-            if (Bus_Index < sizeof(FirmwareRegisterFile)) {
-                val = Bus_FirmwareRegisterFileBytes[Bus_Index++]; 
-            } else {
-                val = Bus_RegisterFileBytes[(Bus_Index++)-sizeof(FirmwareRegisterFile)];
-            }
-            TWI0.SDATA = val; 
+            TWI0.SDATA = Bus.active->data[Bus.activeIndex++]; 
             TWI0.SCTRLB = TWI_CMD_ACK;
-            Bus_State = BusReadOrWriteIncrement;
         } else {
             // ************ Controller Write ***************************************
-            if (Bus_State == BusSetIndexOrReadIncrement) {
-                Bus_Index = TWI0.SDATA;
-                TWI0.SCTRLB = TWI_CMD_ACK;
-                Bus_State = BusReadOrWriteIncrement;
-            } else {
-                if( Bus_Index < sizeof(FirmwareRegisterFile) ||  Bus_Index >= Bus_TotalRegisterFile ) {
-                    TWI0.SCTRLB = TWI_CMD_NACK;
-                    return;
+            switch (Bus.state) {
+                case Bus_ReadOrSelectEp:
+                {
+                    Bus.epcmd = TWI0.SDATA;
+                    uint8_t ep = Bus_EpMask & Bus.epcmd;
+                    if ( ep < RegisterFile_Count() ) {
+                        Bus.activeIndex = 0;
+                        Bus.active = &RegisterFile_Get(ep);
+                        TWI0.SCTRLB = TWI_CMD_ACK;
+                        Bus.state = Bus_SetAddr;
+                    } else {
+                        Bus.state = Bus_Error; 
+                    }
+                    Bus.activeIndex = 0;
+                    break;
                 }
-                uint8_t val = TWI0.SDATA;
-                TWI0.SCTRLB = TWI_CMD_ACK;
-                Bus_RegisterFileBytes[(Bus_Index++)-sizeof(FirmwareRegisterFile)] = val;
-                return;
+                case Bus_SetAddr:
+                {
+                    Bus.activeIndex = TWI0.SDATA;
+                    TWI0.SCTRLB = TWI_CMD_ACK;
+                    Bus.state = Bus_ReadWrite;
+                    break;
+                }
+                case Bus_ReadWrite:
+                {
+                    uint8_t val = TWI0.SDATA;
+                    DEBUG_BREAKPOINT();
+                    if (Bus.active && Bus.activeIndex < Bus.active->size && (Bus.active->flags & Bus_FlagReadWrite)) {
+                        TWI0.SCTRLB = TWI_CMD_ACK;
+                        Bus.active->data[(Bus.activeIndex++)] = val;
+                    } else {
+                        Bus.state = Bus_Error;
+                        TWI0.SCTRLB = TWI_CMD_NACK;
+                    }
+                    break;
+                }
+                case Bus_Error:
+                default:
+                {
+                    DEBUG_BREAKPOINT();
+                    TWI0.SCTRLB = TWI_CMD_NACK;
+                    break;
+                }
             }
         }
     }
 }
 
-void Command_Init() {
-#if CONFIG_TWI_BUS
-    //SDASETUP 4CYC; SDAHOLD OFF; FMPEN disabled; 
-    TWI0.CTRLA = 0x00;
-    
-    //Debug Run
-    TWI0.DBGCTRL = 0x00;
-    
-    //Peripheral Address
-    TWI0.SADDR = CONFIG_TWI_ADDR_DEFAULT;
-    
-    //ADDRMASK 0; ADDREN disabled; 
-    TWI0.SADDRMASK = 0x00;
-    
-    //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
-    TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
-    
-    //ACKACT ACK; SCMD NOACT; 
-    TWI0.SCTRLB = 0x00;
-    
-    //Peripheral Data
-    TWI0.SDATA = 0x00;
-    
-    //DIF disabled; APIF disabled; COLL disabled; BUSERR disabled; 
-    TWI0.SSTATUS = 0x00;
-#endif
-}
+void bus_task (message_t message, MessageData data) {
+    switch (message) {
+        case SystemMessage_Init:
+            //SDASETUP 4CYC; SDAHOLD OFF; FMPEN disabled; 
+            TWI0.CTRLA = 0x00;
 
-void Command_Finit() {
-#if CONFIG_TWI_BUS
-    TWI0.SCTRLA &= ~TWI_ENABLE_bm;
-#endif
-}
+            //Debug Run
+            TWI0.DBGCTRL = 0x00;
 
-void Command_Task() {
-#if CONFIG_TWI_BUS
-    if (Bus_RegisterFile.deviceAddress != 0) {
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            if (Bus_State == BusIdle && TWI0.SADDR != Bus_RegisterFile.deviceAddress) {
-                TWI0.CTRLA = 0x00;
-                TWI0.SCTRLA &= ~TWI_ENABLE_bm;
-                TWI0.SADDR = Bus_RegisterFile.deviceAddress;
-                TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
-                TWI0.SCTRLB = 0x00;
-                TWI0.SDATA = 0x00;
-                TWI0.SSTATUS = 0x00;
-                TWI0.SCTRLA |= TWI_ENABLE_bm;
-            }
-        }
+            //Peripheral Address
+            TWI0.SADDR = CONFIG_TWI_ADDR_DEFAULT;
+
+            //ADDRMASK 0; ADDREN disabled; 
+            TWI0.SADDRMASK = 0x00;
+
+            //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
+            TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
+
+            //ACKACT ACK; SCMD NOACT; 
+            TWI0.SCTRLB = 0x00;
+
+            //Peripheral Data
+            TWI0.SDATA = 0x00;
+
+            //DIF disabled; APIF disabled; COLL disabled; BUSERR disabled; 
+            TWI0.SSTATUS = 0x00;
+            break;
+        case SystemMessage_Abort:
+        case SystemMessage_Finit:
+            TWI0.SCTRLA &= ~TWI_ENABLE_bm;
+            break;
+        default: break;
     }
-#endif
 }
+#endif

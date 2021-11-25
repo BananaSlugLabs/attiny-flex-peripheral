@@ -1,8 +1,6 @@
 #include "common.h"
-
-void App_Init() {}
-
-void App_InitIO() {}
+#include "led.h"
+#include "sys.h"
 
 #if !defined(CONFIG_TEST_PATTERN_TIMESTEP) || CONFIG_TEST_PATTERN_TIMESTEP <= 0
 #define _CONFIG_TEST_PATTERN_TIMESTEP 25
@@ -10,39 +8,46 @@ void App_InitIO() {}
 #define _CONFIG_TEST_PATTERN_TIMESTEP CONFIG_TEST_PATTERN_TIMESTEP
 #endif
 
-void App_Task () {
 #if CONFIG_TEST_PATTERN
-    static uint8_t i = 0;
-    static uint8_t seq = 0;
-    if (!Led_IsBusy()) {
-    
-        if (i == 0) {
-            seq = (seq+1) & 0x7;
-            if (seq == 0) {
-                seq = 1;
-            } 
-        }
+void app_task (message_t message, MessageData data);
 
-        LedColor c = {};
-        c.r=(seq & 1) ? i : 0;
-        c.g=(seq & 2) ? i : 0;
-        c.b=(seq & 4) ? i : 0;
+PRIVATE_TASK_DEFINE(app_task, 5);
+
+void app_task (message_t message, MessageData data) {
+    static uint8_t i;
+    static uint8_t seq;
+    
+    if (message == SystemMessage_Loop) {
+        if (!led_isBusy()) {
+
+            if (i == 0) {
+                seq = (seq+1) & 0x7;
+                if (seq == 0) {
+                    seq = 1;
+                } 
+            }
+
+            Led_Color c = {};
+            c.r=(seq & 1) ? i : 0;
+            c.g=(seq & 2) ? i : 0;
+            c.b=(seq & 4) ? i : 0;
 #if CONFIG_TEST_PATTERN == DEF_TEST_PATTERN_TYPE_SINGLE_FADE
-        Led_Set(2, &c);
-        Led_Set(1, &BuiltinPallet[BuiltInPallet_Blue]);
+            Led_Set(2, &c);
+            Led_Set(1, &BuiltinPallet[BuiltInPallet_Blue]);
 #elif CONFIG_TEST_PATTERN == DEF_TEST_PATTERN_TYPE_UNIFORM_FADE
-        Led_SetAll(&c);
+            led_setAll(&c);
 #else
 #error "Unknown test pattern type."
 #endif
-        
-        Time_Sleep(_CONFIG_TEST_PATTERN_TIMESTEP);
-        i++;
+
+            time_sleep(_CONFIG_TEST_PATTERN_TIMESTEP);
+            i++;
 #if CONFIG_TEST_ABORT
-        if (seq == 3) {
-            Sys_Abort(SysAbortAssertion);
+            if (seq == 3) {
+                sys_abort(SysAbortAssertion);
+            }
+#endif
         }
-#endif
     }
-#endif
 }
+#endif
