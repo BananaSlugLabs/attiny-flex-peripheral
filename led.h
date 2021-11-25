@@ -39,20 +39,6 @@ void led_setAll(const Led_Color* color);
 bool led_isBusy();
 void led_update();
 
-typedef struct LedRegisterControlATag {
-    bool    update      : 1;
-    bool    busy        : 1;
-} LedRegisterControlA;
-
-typedef struct RegisterFileTag {
-    uint8_t                 led_count;                                      // 16
-    LedRegisterControlA     led_config;                                     // 17
-    union {
-        Led_Color colors [CONFIG_LED_COUNT];                                 // 18..(18 + (CONFIG_LED_COUNT*3)) - 1
-        uint8_t  raw[CONFIG_LED_COUNT*sizeof(Led_Color)];
-    } led_data;
-} led_registerfile_t;
-
 #ifdef	__cplusplus
 }
 #endif

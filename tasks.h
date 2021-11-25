@@ -14,7 +14,7 @@ extern "C" {
     
 #include "util.h"
 
-#define TASK_NONE       0xFF
+#define TaskNone        0xFF
 typedef uint8_t         task_t;
     
 enum {
@@ -25,6 +25,9 @@ enum {
     SystemMessage_Finit     = 0x4,
     SystemMessage_Loop      = 0x5,
     SystemMessage_Abort     = 0x6,
+    
+    BusMessage_SignalBase   = 0x20, // Strictly speaking 0x20 will never be used because Signal 0 is a no-op
+    BusMessage_SignalLast   = BusMessage_SignalBase + 7,
 };
 typedef uint8_t message_t;
 
@@ -44,6 +47,9 @@ typedef union MessageDataTag {
 #define MessageData_I16(i)      (MessageData)((uint16_t)i)
 #define MessageData_I8(i)       (MessageData)((uint8_t)i)
 #define MessageData_PTR(i)      (MessageData)((void*)ptr)
+
+#define BusMessage_Signal(index) (BusMessage_SignalBase+((index)&0x7))
+
 
 typedef struct TaskTag {
     void (*entryPoint) (message_t message, MessageData data);
@@ -66,7 +72,8 @@ typedef struct TaskTag {
         };                                                                  \
     LINKER_DESCRIPTOR_ID(const Task, "task", taskEntryPoint, pri);
 
-#define GET_TASK_ID(taskEntryPoint) ((uint8_t)((uintptr_t)&LINKER_DESCRIPTOR_ID_NAME(taskEntryPoint)))
+#define GET_TASK_ID(taskEntryPoint)         ((uint8_t)((uintptr_t)&LINKER_DESCRIPTOR_ID_NAME(taskEntryPoint)))
+#define GET_TASK_ID_WIDE(taskEntryPoint)    ((uintptr_t)&LINKER_DESCRIPTOR_ID_NAME(taskEntryPoint))
 
 /**
  * Sends a message to all tasks. May not be called during IRQ.
@@ -84,6 +91,11 @@ void message_broadcastNow (message_t message, MessageData data);
  * @param data
  */
 void message_send (task_t task, message_t message, MessageData data);
+
+static inline bool task_valid (task_t task) {
+    extern const uint8_t _TaskDescriptorsCount;
+    return task < ((uint8_t)((uintptr_t)&_TaskDescriptorsCount));
+}
 
 #if CONFIG_MESSAGE_QUEUE > 0
 /**

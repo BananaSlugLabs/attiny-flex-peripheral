@@ -27,12 +27,13 @@ void message_broadcastNow (message_t message, MessageData data) {
 }
 
 void message_send (task_t task, message_t message, MessageData data) {
-    if (task <= Task_Count()) {
+    if (task_valid(task)) {
         Task_GetDescriptor(task).entryPoint(message, data);
     }
 }
 
 #if CONFIG_MESSAGE_QUEUE > 0
+#error Untested
 void message_queue (task_t task, message_t message, MessageData data) {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         message_queueFromIrq(task, message, data);

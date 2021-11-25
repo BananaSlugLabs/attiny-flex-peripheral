@@ -88,6 +88,7 @@ int main () {
     message_broadcastNow(SystemMessage_EarlyInit,   MessageData_Empty);
     message_broadcastNow(SystemMessage_Init,        MessageData_Empty);
     wdt_reset();
+    ENABLE_INTERRUPTS();
     message_broadcastNow(SystemMessage_Start,       MessageData_Empty);
     while(1) {
 #if CONFIG_MESSAGE_QUEUE > 0

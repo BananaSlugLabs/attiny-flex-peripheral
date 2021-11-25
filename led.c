@@ -1,58 +1,9 @@
 #include "led.h"
 #include "bus.h"
+#include "led_internal.h"
 #include <avr/cpufunc.h>
 
-/**
- * The state machine works like so:
- * 
- * 1) LED_STATE_IDLE: Inactive
- *  - The state will be LED_STATE_IDLE when no pending actions are desired.
- * 
- * 2) LED_STATE_IDLE/LED_STATE_CHANGED: Changing/Updating
- *  - LED_STATE_CHANGED denotes that the LED buffers have been modified.
- *  - The LEDs may be explicitly updated by a call to #Led_Update
- *  - Alternatively, LED_Task will automatically flush the updated LEDs.
- * 
- * 3) LED_STATE_CHANGED/LED_STATE_IDLE: #Led_Update called
- *    - State is set to LED_STATE_RESET to generate a self-timed reset
- *      pulse.
- *    - Ensure that CCL, TCB are disabled
- *    - Enable USART TX & Data Register Empty interrupt.
- * 
- * 4) LED_STATE_RESET: Data Register Empty Interrupt
- *    - Write data register with 0 (or any value, doesn't matter)
- *    - Increment index.
- *    - When index is LED_RESET_LENGTH, Data Register Empty
- *      is inhibited and TX complete interrupt is enabled.
- *    - Change state to LED_STATE_RESET_DONE
- * 
- * 5) LED_STATE_RESET_DONE: (Resetting) TX complete interrupt arrives:
- *    - CCL, TCB are enabled
- *    - TX complete interrupt inhibited
- *    - Data Register Empty is enabled
- *    - (Data Register Empty will then immediately activate)
- *    - State is set to LED_STATE_STREAM_PIXEL.
- * 
- * 6) LED_STATE_STREAM_PIXEL: Data Register Empty interrupt arrives:
- *    - Using index, load LedBuffer.raw[Led.index] and assign to data register
- *    - Increment the count
- *    - If index == sizeof(LedBuffer.raw):
- *        - Inhibit data register empty and enabled TX complete interrupt.
- *        - Change state to LED_STATE_DONE
- * 
- * 7) LED_STATE_STREAM_PIXEL_DONE: When TX complete interrupt:
- *     - Set the state to LED_CMD_IDLE
- *     - Disable CCL, TCB, USART
- */
 
-#define LED_BAUD(BAUD_RATE)             (((float)(F_CPU * 64) / (2 * (float)BAUD_RATE)) + 0.5)
-#define LED_RESET_LENGTH                100
-
-#define LED_STATE_IDLE                  0
-#define LED_STATE_RESET                 1
-#define LED_STATE_RESET_DONE            2
-#define LED_STATE_STREAM_PIXEL          3
-#define LED_STATE_STREAM_PIXEL_DONE     4
 
 static void led_init();
 static void led_finit();
@@ -66,8 +17,8 @@ typedef struct {
     uint8_t     total;
 } LedState;
 
-led_registerfile_t Led_RegisterFile;
-BUS_REGISTER_FILE(Led_RegisterFile, 1, Bus_FlagReadWrite);
+Led_RegisterFile led_registerfile;
+BUS_REGISTER_FILE_TASK(led_registerfile, 1, Bus_FlagReadWrite, GET_TASK_ID_WIDE(led_task));
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
 
@@ -84,7 +35,6 @@ const Led_Color Led_ColorPallet[Led_ColorIndexMax] = {
     {.r = 0, .g = 0, .b = CONFIG_LED_B_INTENSITY}
 };
 
-#if CONFIG_LED_OPTIMIZE_SIZE
 // While less efficient than the run of the mill polled implementation,
 // when interrupts are disabled, we can jump in to the middle of the IRQ handler
 // and use the interrupt controller to see if we need to RET.
@@ -93,15 +43,12 @@ const Led_Color Led_ColorPallet[Led_ColorIndexMax] = {
 // after a change.
 void SoftISR_Led_TXC ();
 void SoftISR_Led_DRE ();
-#endif
 
 ISR(USART0_TXC_vect) {
-#if CONFIG_LED_OPTIMIZE_SIZE
     asm volatile(
         ".global SoftISR_Led_TXC \n"
         "SoftISR_Led_TXC:"
     );
-#endif
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.OUT |= (1<<CONFIG_LED_IRQ_PIN);
 #endif
@@ -125,7 +72,7 @@ ISR(USART0_TXC_vect) {
             USART0.CTRLA    = 0;
             USART0.CTRLB    &= ~USART_TXEN_bm;
             Led.state       = LED_STATE_IDLE;
-            Led_RegisterFile.led_config.busy = false;
+            led_registerfile.ctrla &= ~Led_CtrlA_Busy;
             break;
             
         default:
@@ -135,27 +82,23 @@ ISR(USART0_TXC_vect) {
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
 #endif
-#if CONFIG_LED_OPTIMIZE_SIZE
     if (!(CPUINT.STATUS&0x3)) {
         asm volatile("ret");
     }
-#endif
 }
 
 // Note: Based on testing, DRE takes approx 1uSec to execute.
 ISR(USART0_DRE_vect) {
-#if CONFIG_LED_OPTIMIZE_SIZE
     asm volatile(
         ".global SoftISR_Led_DRE \n"
         "SoftISR_Led_DRE:"
     );
-#endif
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.OUT |= (1<<CONFIG_LED_IRQ_PIN);
 #endif
     switch (Led.state) {
         case LED_STATE_STREAM_PIXEL:
-            USART0.TXDATAL = Led_RegisterFile.led_data.raw[Led.index];
+            USART0.TXDATAL = ((uint8_t*)led_registerfile.data.colors)[Led.index];
             Led.index ++;
             if (Led.index == Led.total) {
                 USART0.CTRLA    = USART_TXCIE_bm; // switch to TXC IRQ
@@ -179,11 +122,9 @@ ISR(USART0_DRE_vect) {
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
 #endif
-#if CONFIG_LED_OPTIMIZE_SIZE
     if (!(CPUINT.STATUS&0x3)) {
         asm volatile("ret");
     }
-#endif
 }
 
 static void led_init() {
@@ -280,15 +221,15 @@ static void led_init() {
     Led.total = 0;
     
     led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
-    Led_RegisterFile.led_count          = CONFIG_LED_COUNT;
-    Led_RegisterFile.led_config.busy    = false;
-    Led_RegisterFile.led_config.update  = true;
+    
+    led_registerfile.data.count = CONFIG_LED_COUNT;
+    led_registerfile.ctrla      = Led_CtrlA_Update;
+    led_registerfile.ctrlb      = 0;
     
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.DIR |= (1<<CONFIG_LED_IRQ_PIN);
     CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
 #endif
-    
 }
 
 static void led_finit() {
@@ -299,9 +240,8 @@ static void led_finit() {
 
 void led_setAll(const Led_Color* color){
     for (int i = 0; i < CONFIG_LED_COUNT; i ++){
-        Led_RegisterFile.led_data.colors[i] = *color;
+        led_registerfile.data.colors[i] = *color;
     }
-    Led_RegisterFile.led_config.update = true;
 }
 
 void led_setMasked(uint8_t index, const Led_Color* colorA, const Led_Color* colorB, Led_ColorMask mask) {
@@ -309,18 +249,16 @@ void led_setMasked(uint8_t index, const Led_Color* colorA, const Led_Color* colo
         if (mask & Led_ColorMaskAll) {
             mask = 0xF;
         }
-        Led_RegisterFile.led_data.colors[index].r = mask & 1 ? colorB->r : colorA->r;
-        Led_RegisterFile.led_data.colors[index].g = mask & 2 ? colorB->g : colorA->g;
-        Led_RegisterFile.led_data.colors[index].b = mask & 4 ? colorB->b : colorA->b;
+        led_registerfile.data.colors[index].r = mask & 1 ? colorB->r : colorA->r;
+        led_registerfile.data.colors[index].g = mask & 2 ? colorB->g : colorA->g;
+        led_registerfile.data.colors[index].b = mask & 4 ? colorB->b : colorA->b;
     }
-    Led_RegisterFile.led_config.update = true;
 }
 
 void led_set(uint8_t index, const Led_Color* color) {
     if (index < CONFIG_LED_COUNT) {
-        Led_RegisterFile.led_data.colors[index] = *color;
+        led_registerfile.data.colors[index] = *color;
     }
-    Led_RegisterFile.led_config.update = true;
 }
 
 bool led_isBusy() {
@@ -332,27 +270,27 @@ void led_update() {
         return;
     }
     
-    Led_RegisterFile.led_config.busy        = true;
-    Led_RegisterFile.led_config.update      = false;
-    if ( Led_RegisterFile.led_count == 0 ) {
+    if ( led_registerfile.data.count == 0 ) {
         // nothing to do...
-        Led_RegisterFile.led_config.busy    = false;
+        led_registerfile.ctrla = 0;
         return;
     }
-    Led.total = Led_RegisterFile.led_count * sizeof(Led_Color);
-    Led.state = LED_STATE_RESET;
+    
+    // Report busy & setup registers
+    led_registerfile.ctrla  = Led_CtrlA_Busy;
+    Led.total               = led_registerfile.data.count * sizeof(Led_Color);
+    Led.state               = LED_STATE_RESET;
+    Led.index               = 0;
     
     // Disable CCL Output, Timer, and clear USART Transmit Done Flag
-    CCL.LUT0CTRLA   &= ~CCL_ENABLE_bm;
-    TCB0.CTRLA      &= ~TCB_ENABLE_bm;
-    USART0.STATUS   = USART_TXCIF_bm;
-    USART0.CTRLB    |= USART_TXEN_bm;
-    Led.index       = 0;
+    CCL.LUT0CTRLA           &= ~CCL_ENABLE_bm;
+    TCB0.CTRLA              &= ~TCB_ENABLE_bm;
+    USART0.STATUS           = USART_TXCIF_bm;
+    USART0.CTRLB            |= USART_TXEN_bm;
     
     if (SREG & CPU_I_bm) {
-            USART0.CTRLA = USART_DREIE_bm;
+        USART0.CTRLA = USART_DREIE_bm;
     } else {
-#if CONFIG_LED_OPTIMIZE_SIZE
         // Simulate Interrupts through polling...
         USART0.CTRLA = USART_DREIE_bm;
         while (USART0.CTRLA & (USART_TXCIE_bm | USART_DREIE_bm)) {
@@ -362,41 +300,6 @@ void led_update() {
                 SoftISR_Led_TXC();
             }
         }
-#else
-        for (Led.index = 0; Led.index < LED_RESET_LENGTH; Led.index ++) {
-            while (!(USART0.STATUS & USART_DREIF_bm));
-            USART0.TXDATAL = 0;
-        }
-
-        Led.state = LED_STATE_STREAM_PIXEL;
-        
-        // Wait for TX to complete:
-        while (!(USART0.STATUS & USART_TXCIF_bm));
-        
-        // Enable CCL Output, Timer, and clear USART Transmit Done Flag
-        USART0.STATUS = USART_TXCIF_bm;
-        CCL.LUT0CTRLA |= CCL_ENABLE_bm;
-        TCB0.CTRLA |= TCB_ENABLE_bm;
-
-        // Iterate through each pixel and send when buffered register is set.
-        uint8_t* buf = Bus_RegisterFile.led_data.raw;
-        for (Led.index = 0; Led.index < Led.total; Led.index++) {
-            while (!(USART0.STATUS & USART_DREIF_bm));
-            USART0.TXDATAL = buf[Led.index];
-        }
-        
-        // Ensure that transmit is completed.
-        while (!(USART0.STATUS & USART_TXCIF_bm));
-        
-        CCL.LUT0CTRLA   &= ~CCL_ENABLE_bm;
-        TCB0.CTRLA      &= ~TCB_ENABLE_bm;
-        USART0.STATUS   = USART_TXCIF_bm;
-        USART0.CTRLB    &= ~USART_TXEN_bm;
-        Led.state       = LED_STATE_IDLE;
-
-        Led.state = LED_STATE_IDLE;
-        Bus_RegisterFile.led_config.busy = false;
-#endif
     }
 }
 
@@ -410,10 +313,15 @@ void led_task (message_t message, MessageData data) {
             led_finit();
             break;
         case SystemMessage_Loop:
-            if (Led_RegisterFile.led_config.update) {
+            if (led_registerfile.ctrla & Led_CtrlA_Update) {
                 led_update();
             }
             break;
+#if CONFIG_BUS_SIGNAL
+        case BusMessage_Signal(1):
+            led_update();
+            break;
+#endif
         default: break;
     }
 }

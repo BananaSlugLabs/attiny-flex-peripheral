@@ -42,6 +42,7 @@ void app_task (message_t message, MessageData data) {
 
             time_sleep(_CONFIG_TEST_PATTERN_TIMESTEP);
             i++;
+            led_update();
 #if CONFIG_TEST_ABORT
             if (seq == 3) {
                 sys_abort(SysAbortAssertion);

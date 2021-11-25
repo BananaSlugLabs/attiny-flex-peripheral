@@ -24,7 +24,11 @@ extern "C" {
         ATTRIBUTES(section(section_name ".descriptor" # pri))
 #define LINKER_DESCRIPTOR_ID(sec_type, section_name, name, pri)             \
     const uint8_t LINKER_DESCRIPTOR_ID_NAME(name)                           \
-        ATTRIBUTES(section(section_name ".id" # pri))
+        ATTRIBUTES(section(section_name ".id" # pri)) = 0xAA
+    /* WORKAROUD: 0xAA is needed because...microchip f***ing sucks.
+     * Don't try to make sense of it. The debugger will program the device
+     * incorrectly.
+     */
 #define LINKER_DESCRIPTOR_ID_NOATTR(sec_type, section_name, name, pri)      \
     const uint8_t LINKER_DESCRIPTOR_ID_NAME(name) 
 

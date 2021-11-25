@@ -7,10 +7,6 @@
 
 #ifndef DEVICE_CONFIG_H
 #define	DEVICE_CONFIG_H
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
     
 #define DEF_ENABLE                              1
 #define DEF_DISABLE                             0
@@ -20,10 +16,13 @@ extern "C" {
 
 #define CONFIG_CLOCK                            20000000
 #define F_CPU                                   CONFIG_CLOCK
+
 /**
  * Number of messages to queue. The count of messages is (1<<value). I.e. power of 2.
  */
-#define CONFIG_MESSAGE_QUEUE                    3 
+#define CONFIG_MESSAGE_QUEUE                    0
+
+#define CONFIG_BREAK_ON_START                   DEF_DISABLE
     
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -32,15 +31,6 @@ extern "C" {
  * Maximum LEDs to support.
  */
 #define CONFIG_LED_COUNT                        16
-    
-/**
- * Uses the body of the interrupt handler to implement a pseudo interrupt when
- * polling. This avoids duplicating code.
- * 
- * By far one of my most impressive reckless, unsafe and satisfying optimizations
- * in recent memory. Saved a whopping 82 bytes of program memory.
- */
-#define CONFIG_LED_OPTIMIZE_SIZE                DEF_ENABLE
     
 #define CONFIG_LED_R_INTENSITY                  0x20
 #define CONFIG_LED_G_INTENSITY                  0x20
@@ -57,8 +47,14 @@ extern "C" {
  * Default I2C device address. When modified at runtime, the value will be stored
  * in the EEPROM.
  */
-#define CONFIG_TWI_ADDR_DEFAULT                 82
-#define CONFIG_TWI_BUS                          DEF_ENABLE
+#define CONFIG_BUS_DEFAULT_ADDRESS              0x52
+#define CONFIG_BUS_ENABLE                       DEF_ENABLE
+#define CONFIG_BUS_SIGNAL                       DEF_ENABLE
+
+// *****************************************************************************
+// **** Persistence ************************************************************
+
+#define CONFIG_PERSIST                          DEF_ENABLE
 
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -86,38 +82,49 @@ extern "C" {
  * Never restart after an abort.
  */
 #define DEF_ABORT_FLAGS_HALT                    0x0000
+
 /**
  * After an abort, restart the device automatically.
  */
 #define DEF_ABORT_FLAGS_RESTART                 0x8000
+
 /**
  * Flashes the LEDs with the error code. (Red-Blue error codes)
  */
 #define DEF_ABORT_FLAGS_LEDCODE_LONG            0x4000
+
 /**
  * Flashes the LEDs (red-black flashing) without an error code. Reduces code space.
  */
 #define DEF_ABORT_FLAGS_LEDCODE_SHORT           0x2000
+
 /**
  * Upon entry to Sys_Abort, execute a soft breakpoint.
  */
 #define DEF_ABORT_FLAGS_BREAKPOINT              0x1000
 #define DEF_ABORT_FLAGS_LEDCODE_COUNT_bm        0x00FF
+
 /**
  * If > 0, cycle the LEDCODE N times and then restart; Otherwise display LEDCODE
  * indefinitely. Supports upt to 255 cycles.
  */
 #define DEF_ABORT_FLAGS_LEDCODE_COUNT(n)        ((n)&DEF_ABORT_FLAGS_LEDCODE_COUNT_bm)
-    
+
+#if 1
 #define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT         | \
                                                  DEF_ABORT_FLAGS_LEDCODE_SHORT      | \
                                                  DEF_ABORT_FLAGS_RESTART            | \
                                                  DEF_ABORT_FLAGS_LEDCODE_COUNT(4))
+#else
+#define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT         | \
+                                                 DEF_ABORT_FLAGS_RESTART)
+#endif
 
 /**
  * Time in msec to hold the LEDCODE display on. Specify 0 for default.
  */
 #define CONFIG_ABORT_LEDCODE_TIMER_HI           0
+
 /**
  * Time in msec to hold the LEDCODE display off. Specify 0 for default.
  */
@@ -137,7 +144,7 @@ extern "C" {
 #define DEF_SRAM_INIT_NONE                      0
 #define DEF_SRAM_INIT_ZERO                      1
 #define DEF_SRAM_INIT_STRIPE                    2
-    
+
 #define CONFIG_SRAM_INIT                        DEF_SRAM_INIT_STRIPE
 
 // *****************************************************************************
@@ -158,17 +165,13 @@ extern "C" {
 /**
  * Generate a fake "abort" signal. Requires CONFIG_TEST_PATTERN.
  */
-#define CONFIG_TEST_ABORT                       DEF_ENABLE
+#define CONFIG_TEST_ABORT                       DEF_DISABLE
 
-#if CONFIG_LED_IRQ_PERF && CONFIG_TWI_BUS
+#if CONFIG_LED_IRQ_PERF && CONFIG_BUS_ENABLE
 #error "Cannot enable TWI bus and IRQ performance monitor."
 #endif
 #if CONFIG_LED_IRQ_PERF && (!defined(CONFIG_LED_IRQ_PORT) || !defined(CONFIG_LED_IRQ_PIN))
 #error "Missing IRQ Port/Pin configuration for performance measurements."
-#endif
-
-#ifdef	__cplusplus
-}
 #endif
 
 #endif	/* DEVICE_CONFIG_H */
