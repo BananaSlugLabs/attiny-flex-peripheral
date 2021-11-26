@@ -24,20 +24,43 @@ typedef struct BusBufferTag {
     uint8_t*                data;
     uint8_t                 size;
     Bus_Flags               flags;
-#if CONFIG_BUS_SIGNAL
+#if CONFIG_BUS_SIGNAL == DEF_BUS_SIGNAL_OPTIMIZED
+    task_t                  task;
+#elif CONFIG_BUS_SIGNAL
     uintptr_t               task;
 #endif
 } Bus_EndPoint;
-#if 0
+
 #define BUS_REGISTER_FILE(registerfile, pri, regflags)                                      \
-    LINKER_DESCRIPTOR_DATA(const Bus_EndPoint, "registerfile", registerfile, pri) =         \
-        {                                                                                   \
-            .data           = (uint8_t*)&registerfile,                                      \
-            .size           = sizeof(registerfile),                                         \
-            .flags          = regflags                                                      \
-        };                                                                                  \
-    LINKER_DESCRIPTOR_ID(const Bus_EndPoint, "registerfile", registerfile, pri);
-#endif
+    BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, 0)
+
+#define BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                          \
+    _BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)
+
+#if CONFIG_BUS_SIGNAL == DEF_BUS_SIGNAL_OPTIMIZED
+
+// uhhh... yeah that was totally worth the 3 bytes. lol.
+
+#define BUS_TASK_FROM_EP(t) \
+    GET_TASK_ID_RAW(led_task)
+#define _BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                         \
+    LINKER_DESCRIPTOR_ID(const Bus_EndPoint, "registerfile", registerfile, pri);            \
+    void LINKER_DESCRIPTOR_DATA_NAME(registerfile) ()                                       \
+        ATTRIBUTES(naked, section("registerfile.descriptor" # pri));                        \
+    void LINKER_DESCRIPTOR_DATA_NAME(registerfile) () {                                     \
+        asm(                                                                                \
+            ".word	" #registerfile " \n"                                                   \
+            ".byte	%1 \n"                                                                  \
+            ".byte	%0 \n"                                                                  \
+            ".byte	" #mtask " + 5 \n"                                                          \
+            : /* no output */                                                               \
+            : "M" (regflags), "X" (sizeof(registerfile))                                    \
+        );                                                                                  \
+    }
+#else
+
+#define BUS_TASK_FROM_EP(t) \
+    GET_TASK_ID_WIDE(led_task)
 
 #if CONFIG_BUS_SIGNAL
 #define _BUS_REGISTER_FILE_SET_TASK(mtask) .task = mtask
@@ -45,18 +68,16 @@ typedef struct BusBufferTag {
 #define _BUS_REGISTER_FILE_SET_TASK(mtask)
 #endif
 
-#define BUS_REGISTER_FILE(registerfile, pri, regflags)                                      \
-    BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, 0)
-
-#define BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                          \
-    LINKER_DESCRIPTOR_DATA(const Bus_EndPoint, "registerfile", registerfile, pri) =         \
-        {                                                                                   \
+#define _BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                         \
+    LINKER_DESCRIPTOR_DATA(const Bus_EndPoint, "registerfile", registerfile, pri) = {       \
             .data           = (uint8_t*)&registerfile,                                      \
             .size           = sizeof(registerfile),                                         \
             .flags          = regflags,                                                     \
             _BUS_REGISTER_FILE_SET_TASK(mtask)                                              \
-        };                                                                                  \
+    };                                                                                      \
     LINKER_DESCRIPTOR_ID(const Bus_EndPoint, "registerfile", registerfile, pri);
+
+#endif
 #ifdef	__cplusplus
 }
 #endif

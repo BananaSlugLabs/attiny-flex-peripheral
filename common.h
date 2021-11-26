@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <avr/io.h>
 #include <avr/builtins.h>
+#include <avr/interrupt.h>
 //#include "mcc_generated_files/mcc.h"
 #include <util/atomic.h>
 #include <avr/cpufunc.h>

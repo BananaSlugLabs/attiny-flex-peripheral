@@ -10,7 +10,6 @@
 
 #if CONFIG_TEST_PATTERN
 void app_task (message_t message, MessageData data);
-
 PRIVATE_TASK_DEFINE(app_task, 5);
 
 void app_task (message_t message, MessageData data) {
@@ -32,8 +31,8 @@ void app_task (message_t message, MessageData data) {
             c.g=(seq & 2) ? i : 0;
             c.b=(seq & 4) ? i : 0;
 #if CONFIG_TEST_PATTERN == DEF_TEST_PATTERN_TYPE_SINGLE_FADE
-            Led_Set(2, &c);
-            Led_Set(1, &BuiltinPallet[BuiltInPallet_Blue]);
+            led_set(2, &c);
+            led_set(1, &Led_ColorPallet[Led_ColorBlueIndex]);
 #elif CONFIG_TEST_PATTERN == DEF_TEST_PATTERN_TYPE_UNIFORM_FADE
             led_setAll(&c);
 #else

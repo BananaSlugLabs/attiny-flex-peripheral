@@ -18,7 +18,7 @@ typedef struct {
 } LedState;
 
 Led_RegisterFile led_registerfile;
-BUS_REGISTER_FILE_TASK(led_registerfile, 1, Bus_FlagReadWrite, GET_TASK_ID_WIDE(led_task));
+BUS_REGISTER_FILE_TASK(led_registerfile, 1, Bus_FlagReadWrite, BUS_TASK_FROM_EP(led_task));
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
 

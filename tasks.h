@@ -74,6 +74,7 @@ typedef struct TaskTag {
 
 #define GET_TASK_ID(taskEntryPoint)         ((uint8_t)((uintptr_t)&LINKER_DESCRIPTOR_ID_NAME(taskEntryPoint)))
 #define GET_TASK_ID_WIDE(taskEntryPoint)    ((uintptr_t)&LINKER_DESCRIPTOR_ID_NAME(taskEntryPoint))
+#define GET_TASK_ID_RAW(taskEntryPoint)     LINKER_DESCRIPTOR_ID_NAME(taskEntryPoint)
 
 /**
  * Sends a message to all tasks. May not be called during IRQ.

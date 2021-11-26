@@ -20,7 +20,7 @@ extern "C" {
 #define LINKER_DESCRIPTOR_ID_NAME(name)         name ## _id
 #define LINKER_DESCRIPTOR_DATA_NAME(name)       name ## _desc
 #define LINKER_DESCRIPTOR_DATA(sec_type, section_name, name, pri)           \
-    const sec_type LINKER_DESCRIPTOR_DATA_NAME(name)                        \
+    sec_type LINKER_DESCRIPTOR_DATA_NAME(name)                        \
         ATTRIBUTES(section(section_name ".descriptor" # pri))
 #define LINKER_DESCRIPTOR_ID(sec_type, section_name, name, pri)             \
     const uint8_t LINKER_DESCRIPTOR_ID_NAME(name)                           \

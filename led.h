@@ -13,7 +13,14 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-    
+
+/*
+ * ColorCode:
+ *  Led_Color[16] ram_pallet
+ *  Led_Color[16] rom_pallet
+ *  Led_Color[16] ram_pallet
+ */
+
 typedef struct Led_ColorTag {
     uint8_t g;
     uint8_t r;

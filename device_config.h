@@ -47,9 +47,13 @@
  * Default I2C device address. When modified at runtime, the value will be stored
  * in the EEPROM.
  */
+#define DEF_BUS_SIGNAL_NORMAL                   1
+#define DEF_BUS_SIGNAL_OPTIMIZED                2
+
 #define CONFIG_BUS_DEFAULT_ADDRESS              0x52
 #define CONFIG_BUS_ENABLE                       DEF_ENABLE
-#define CONFIG_BUS_SIGNAL                       DEF_ENABLE
+#define CONFIG_BUS_SIGNAL                       DEF_BUS_SIGNAL_NORMAL
+#define CONFIG_BUS_PERSIST                      DEF_ENABLE
 
 // *****************************************************************************
 // **** Persistence ************************************************************
@@ -159,7 +163,7 @@
  */
 #define DEF_TEST_PATTERN_TYPE_UNIFORM_FADE      2
     
-#define CONFIG_TEST_PATTERN                     DEF_DISABLE
+#define CONFIG_TEST_PATTERN                     DEF_DISABLE //DEF_TEST_PATTERN_TYPE_SINGLE_FADE
 #define CONFIG_TEST_PATTERN_TIMESTEP            0
 
 /**

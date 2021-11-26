@@ -98,8 +98,9 @@ typedef enum Bus_StateTag {
 
 enum {
     Bus_EpMask              = 0x0F,
-    Bus_CmdMask             = 0xE0,
-    Bus_CmdBp               = 5
+    Bus_SignalMask          = 0xE0,
+    Bus_SignalBp            = 5
+    
 };
 
 static struct {
@@ -132,7 +133,7 @@ ISR(TWI0_TWIS_vect) {
 #endif
         } else {
                 TWI0.SCTRLB = TWI_CMD_DONE;
-            if (Bus.epcmd & Bus_CmdMask) {
+            if (Bus.epcmd & Bus_SignalMask) {
                 Bus.state = Bus_SendSignal;
             } else {
                 Bus.state = Bus_Idle;
@@ -236,8 +237,8 @@ void bus_task (message_t message, MessageData data) {
 #if CONFIG_BUS_SIGNAL
         case SystemMessage_Loop:
             if (Bus.state == Bus_SendSignal) {
-                uint8_t cmd = ((Bus.epcmd&Bus_CmdMask) >> Bus_CmdBp);
-                Bus.epcmd &= ~Bus_CmdMask;
+                uint8_t cmd = ((Bus.epcmd&Bus_SignalMask) >> Bus_SignalBp);
+                Bus.epcmd &= ~Bus_SignalMask;
                 if (Bus.active) {
                     message_send(Bus.active->task, BusMessage_SignalBase + cmd, MessageData_Empty);
                 }

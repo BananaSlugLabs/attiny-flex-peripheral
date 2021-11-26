@@ -42,3 +42,5 @@ __boot_init:
 #elif CONFIG_SRAM_INIT != DEF_SRAM_INIT_NONE
 #error "CONFIG_SRAM_INIT must be one of DEF_SRAM_INIT_STRIPE, DEF_SRAM_INIT_ZERO, or DEF_SRAM_INIT_NONE."
 #endif
+
+    
