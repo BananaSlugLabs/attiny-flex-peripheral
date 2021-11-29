@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "sys.h"
 
 /*
  * I2C Bus Interface
@@ -32,18 +33,7 @@
  */
 
 #if CONFIG_BUS_ENABLE
-#if 0
-enum PixelKindTag {
-    LedKindWS2812         = 1,
-};
-typedef uint8_t LedKind;
 
-enum PixelFormatTag {
-    LedFormatGRB888       = 1
-};
-typedef uint8_t LedFormat;
-typedef uint8_t LedCount;
-#endif
 
 enum {
     Device_CapabilitySignal       = 1<<5
@@ -81,9 +71,6 @@ extern const Bus_EndPoint               _RegisterFileDescriptors;
 extern const uint8_t                    _RegisterFileDescriptorsCount;
 #define RegisterFile_Get(index)         (((Bus_EndPoint*)&_RegisterFileDescriptors)[index])
 #define RegisterFile_Count()            ((uint8_t)((uintptr_t)&_RegisterFileDescriptorsCount))
-
-void bus_task (message_t message, MessageData data);
-PRIVATE_TASK_DEFINE(bus_task, 3);
 
 #define Bus_EndPointGet(index)      (&(((Bus_EndPoint*)&_Bus_RegisterFileEndPoints)[index]))
 
@@ -147,7 +134,7 @@ ISR(TWI0_TWIS_vect) {
             // ************ Controller Read ****************************************
             if( /*(Bus.state == Bus_ReadOrSelectEp && (s & TWI_RXACK_bm)) ||*/ !Bus.active || Bus.activeIndex >= Bus.active->size) {
                 TWI0.SCTRLB = TWI_CMD_DONE;
-                Bus.state = Bus_Idle;
+                Bus.state = Bus_Idle; 
                 return;
             }
             
@@ -203,50 +190,55 @@ ISR(TWI0_TWIS_vect) {
     }
 }
 
-void bus_task (message_t message, MessageData data) {
-    switch (message) {
-        case SystemMessage_Init:
-            //SDASETUP 4CYC; SDAHOLD OFF; FMPEN disabled; 
-            TWI0.CTRLA = 0x00;
 
-            //Debug Run
-            TWI0.DBGCTRL = 0x00;
+static void bus_init();
+static void bus_finit();
+static void bus_loop();
 
-            //Peripheral Address
-            TWI0.SADDR = CONFIG_BUS_DEFAULT_ADDRESS;
+SysInit_Subscribe(bus_init,         Signal_Normal);
+SysFinit_Subscribe(bus_finit,       Signal_Normal);
+SysAbort_Subscribe(bus_finit,       Signal_Normal);
+SysLoop_Subscribe(bus_loop,         Signal_Normal);
 
-            //ADDRMASK 0; ADDREN disabled; 
-            TWI0.SADDRMASK = 0x00;
+static void bus_init() {
+    //SDASETUP 4CYC; SDAHOLD OFF; FMPEN disabled; 
+    TWI0.CTRLA = 0x00;
 
-            //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
-            TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
+    //Debug Run
+    TWI0.DBGCTRL = 0x00;
 
-            //ACKACT ACK; SCMD NOACT; 
-            TWI0.SCTRLB = 0x00;
+    //Peripheral Address
+    TWI0.SADDR = CONFIG_BUS_DEFAULT_ADDRESS;
 
-            //Peripheral Data
-            TWI0.SDATA = 0x00;
+    //ADDRMASK 0; ADDREN disabled; 
+    TWI0.SADDRMASK = 0x00;
 
-            //DIF disabled; APIF disabled; COLL disabled; BUSERR disabled; 
-            TWI0.SSTATUS = 0x00;
-            break;
-        case SystemMessage_Abort:
-        case SystemMessage_Finit:
-            TWI0.SCTRLA &= ~TWI_ENABLE_bm;
-            break;
-#if CONFIG_BUS_SIGNAL
-        case SystemMessage_Loop:
-            if (Bus.state == Bus_SendSignal) {
-                uint8_t cmd = ((Bus.epcmd&Bus_SignalMask) >> Bus_SignalBp);
-                Bus.epcmd &= ~Bus_SignalMask;
-                if (Bus.active) {
-                    message_send(Bus.active->task, BusMessage_SignalBase + cmd, MessageData_Empty);
-                }
-                Bus.state = Bus_Idle;
-            }
-            break;
-#endif
-        default: break;
+    //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
+    TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
+
+    //ACKACT ACK; SCMD NOACT; 
+    TWI0.SCTRLB = 0x00;
+
+    //Peripheral Data
+    TWI0.SDATA = 0x00;
+
+    //DIF disabled; APIF disabled; COLL disabled; BUSERR disabled; 
+    TWI0.SSTATUS = 0x00;
+}
+
+static void bus_finit() {
+    TWI0.SCTRLA &= ~TWI_ENABLE_bm;
+    
+}
+
+static void bus_loop() {
+    if (Bus.state == Bus_SendSignal) {
+        uint8_t cmd = ((Bus.epcmd&Bus_SignalMask) >> Bus_SignalBp);
+        Bus.epcmd &= ~Bus_SignalMask;
+        //if (Bus.active) {
+            //message_send(Bus.active->task, BusMessage_SignalBase + cmd, MessageData_Empty);
+        //}
+        Bus.state = Bus_Idle;
     }
 }
 #endif

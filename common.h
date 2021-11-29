@@ -20,7 +20,6 @@
 #include "device_config.h"
 #include "firmware.h"
 #include "util.h"
-#include "tasks.h"
 
 /*init_priority (101)*/
 

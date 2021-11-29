@@ -3,6 +3,18 @@
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
    notice and this notice are preserved.  */
+
+/*
+
+https://sourceware.org/binutils/docs/ld/Miscellaneous-Commands.html#index-insert-user-script-into-default-script
+
+init_priority doesn't work on AVR GCC
+
+
+
+*/
+
+
 OUTPUT_FORMAT("elf32-avr","elf32-avr","elf32-avr")
 OUTPUT_ARCH(avr:103)
 __TEXT_REGION_ORIGIN__ = DEFINED(__TEXT_REGION_ORIGIN__) ? __TEXT_REGION_ORIGIN__ : 0;
@@ -144,6 +156,12 @@ SECTIONS
     KEEP (*(.init9))
     *(.text)
     . = ALIGN(2);
+
+    _dispatch_start     = .;
+    KEEP (*(SORT_BY_NAME(dispatch.*.[pxs][0-9][0-9][0-9])))
+    _dispatch_end       = .;
+
+    . = ALIGN(2);
      *(.text.*)
     . = ALIGN(2);
     *(.fini9)  /* _exit() starts here.  */
@@ -154,7 +172,7 @@ SECTIONS
     KEEP (*(.fini7))
     *(.fini6)  /* C++ destructors.  */
     KEEP (*(.fini6))
-    *(.fini5)
+    *(.fini5) 
     KEEP (*(.fini5))
     *(.fini4)
     KEEP (*(.fini4))
@@ -169,60 +187,10 @@ SECTIONS
      _etext = . ;
   }  > text
 
-  /*****************************************************************************
-   **** Task ID Mapping
-   ****************************************************************************/
-  .ident.task  0x0 (DSECT) :
+  .ident.iomem  0x0 (DSECT) :
   {
-    KEEP(SORT(*)(task.id0))
-    KEEP(SORT(*)(task.id1))
-    KEEP(SORT(*)(task.id2))
-    KEEP(SORT(*)(task.id3))
-    KEEP(SORT(*)(task.id4))
-    KEEP(SORT(*)(task.id5))
-    KEEP(SORT(*)(task.id6))
-    KEEP(SORT(*)(task.id7))
-    KEEP(SORT(*)(task.id8))
-    KEEP(SORT(*)(task.id9))
-    _TaskDescriptorsCount = .;
-    
-  }
-
-  /*****************************************************************************
-   **** Register File ID Mapping
-   ****************************************************************************/
-  .ident.registerfile  0x0 (DSECT) :
-  {
-    KEEP(SORT(*)(registerfile.id0))
-    KEEP(SORT(*)(registerfile.id1))
-    KEEP(SORT(*)(registerfile.id2))
-    KEEP(SORT(*)(registerfile.id3))
-    KEEP(SORT(*)(registerfile.id4))
-    KEEP(SORT(*)(registerfile.id5))
-    KEEP(SORT(*)(registerfile.id6))
-    KEEP(SORT(*)(registerfile.id7))
-    KEEP(SORT(*)(registerfile.id8))
-    KEEP(SORT(*)(registerfile.id9))
-    KEEP(SORT(*)(registerfile.id10))
-    KEEP(SORT(*)(registerfile.id11))
-    KEEP(SORT(*)(registerfile.id12))
-    KEEP(SORT(*)(registerfile.id13))
-    KEEP(SORT(*)(registerfile.id14))
-    KEEP(SORT(*)(registerfile.id15))
-    _RegisterFileDescriptorsCount = .;
-    
-  }
-
-  /*****************************************************************************
-   **** Persist ID Mapping
-   ****************************************************************************/
-  .ident.persist  0x0 (DSECT) :
-  {
-    KEEP(SORT(*)(persist.id0))
-    KEEP(SORT(*)(persist.id1))
-    KEEP(SORT(*)(persist.id2))
-    KEEP(SORT(*)(persist.id3))
-    _PersistDescriptorsCount = .;
+    KEEP (*(SORT_BY_NAME(iomem.id[0-9][0-9][0-9])))
+    _bus_memmap_count = .;
     
   }
 
@@ -232,57 +200,9 @@ SECTIONS
      *(.rodata*)
     *(.gnu.linkonce.r*)
 
-    /*
-    _RegisterFileDescriptors = .;
-    SORT_BY_INIT_PRIORITY(KEEP (*(registerfile.descriptor)))
-    *(registerfiles.descriptor)
-    */
-    
-    /***************************************************************************
-     **** Task Descriptors
-     **************************************************************************/
-    _TaskDescriptors = .;
-    KEEP(SORT(*)(task.descriptor0))
-    KEEP(SORT(*)(task.descriptor1))
-    KEEP(SORT(*)(task.descriptor2))
-    KEEP(SORT(*)(task.descriptor3))
-    KEEP(SORT(*)(task.descriptor4))
-    KEEP(SORT(*)(task.descriptor5))
-    KEEP(SORT(*)(task.descriptor6))
-    KEEP(SORT(*)(task.descriptor7))
-    KEEP(SORT(*)(task.descriptor8))
-    KEEP(SORT(*)(task.descriptor9))
-
-    
-    /***************************************************************************
-     **** Register File Descriptors
-     **************************************************************************/
-    _RegisterFileDescriptors = .;
-    KEEP (*(registerfile.descriptor0))
-    KEEP (*(registerfile.descriptor1))
-    KEEP (*(registerfile.descriptor2))
-    KEEP (*(registerfile.descriptor3))
-    KEEP (*(registerfile.descriptor4))
-    KEEP (*(registerfile.descriptor5))
-    KEEP (*(registerfile.descriptor6))
-    KEEP (*(registerfile.descriptor7))
-    KEEP (*(registerfile.descriptor8))
-    KEEP (*(registerfile.descriptor9))
-    KEEP (*(registerfile.descriptor10))
-    KEEP (*(registerfile.descriptor11))
-    KEEP (*(registerfile.descriptor12))
-    KEEP (*(registerfile.descriptor13))
-    KEEP (*(registerfile.descriptor14))
-    KEEP (*(registerfile.descriptor15))
-
-    /***************************************************************************
-     **** Persist Descriptors
-     **************************************************************************/
-    _PersistDescriptors = .;
-    KEEP (*(persist.descriptor0))
-    KEEP (*(persist.descriptor1))
-    KEEP (*(persist.descriptor2))
-    KEEP (*(persist.descriptor3))
+    _bus_memmap_start = .;
+    KEEP (*(SORT_BY_NAME(iomem.data[0-9][0-9][0-9])))
+    _bus_memmap_end = .;
   } AT> text
 
   .data          :
@@ -318,16 +238,6 @@ SECTIONS
   {
     /* See .data above...  */
     KEEP(*(.eeprom*))
-    /***************************************************************************
-     **** Persist Records
-     **************************************************************************/
-    _PersistRecords = .;
-    KEEP (*(persist.record0))
-    KEEP (*(persist.record1))
-    KEEP (*(persist.record2))
-    KEEP (*(persist.record3))
-    _PersistRecordsEnd = .;
-
      __eeprom_end = . ;
   }  > eeprom
   .fuse  :
@@ -396,63 +306,3 @@ SECTIONS
   .debug_str_offsets 0 : { *(.debug_str_offsets) }
   .debug_sup      0 : { *(.debug_sup) }
 }
-
-
-/***************************************************************
-Scratch
-
-
-    KEEP(SORT(*)(task.descriptor0))
-    *(task.descriptor0)
-    KEEP(SORT(*)(task.descriptor1))
-    *(task.descriptor1)
-    KEEP(SORT(*)(task.descriptor2))
-    *(task.descriptor2)
-    KEEP(SORT(*)(task.descriptor3))
-    *(task.descriptor3)
-    KEEP(SORT(*)(task.descriptor4))
-    *(task.descriptor4)
-    KEEP(SORT(*)(task.descriptor5))
-    *(task.descriptor5)
-    KEEP(SORT(*)(task.descriptor6))
-    *(task.descriptor6)
-    KEEP(SORT(*)(task.descriptor7))
-    *(task.descriptor7)
-    KEEP(SORT(*)(task.descriptor8))
-    *(task.descriptor8)
-    KEEP(SORT(*)(task.descriptor9))
-    *(task.descriptor9)
-
-    KEEP (*(registerfile.descriptor0))
-    *(registerfile.descriptor0)
-    KEEP (*(registerfile.descriptor1))
-    *(registerfile.descriptor1)
-    KEEP (*(registerfile.descriptor2))
-    *(registerfile.descriptor2)
-    KEEP (*(registerfile.descriptor3))
-    *(registerfile.descriptor3)
-    KEEP (*(registerfile.descriptor4))
-    *(registerfile.descriptor4)
-    KEEP (*(registerfile.descriptor5))
-    *(registerfile.descriptor5)
-    KEEP (*(registerfile.descriptor6))
-    *(registerfile.descriptor6)
-    KEEP (*(registerfile.descriptor7))
-    *(registerfile.descriptor7)
-    KEEP (*(registerfile.descriptor8))
-    *(registerfile.descriptor8)
-    KEEP (*(registerfile.descriptor9))
-    *(registerfile.descriptor9)
-    KEEP (*(registerfile.descriptor10))
-    *(registerfile.descriptor10)
-    KEEP (*(registerfile.descriptor11))
-    *(registerfile.descriptor11)
-    KEEP (*(registerfile.descriptor12))
-    *(registerfile.descriptor12)
-    KEEP (*(registerfile.descriptor13))
-    *(registerfile.descriptor13)
-    KEEP (*(registerfile.descriptor14))
-    *(registerfile.descriptor14)
-    KEEP (*(registerfile.descriptor15))
-    *(registerfile.descriptor15)
-*/

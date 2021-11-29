@@ -14,70 +14,43 @@
 extern "C" {
 #endif
 
-enum {
-    Bus_FlagReadOnly        = 0,
-    Bus_FlagReadWrite       = 1<<0,
-};
-typedef uint8_t Bus_Flags;
+typedef struct Bus_MemMapTag {
+    uint8_t*            data;
+    uint8_t             length;
+} Bus_MemMap;
 
-typedef struct BusBufferTag {
-    uint8_t*                data;
-    uint8_t                 size;
-    Bus_Flags               flags;
-#if CONFIG_BUS_SIGNAL == DEF_BUS_SIGNAL_OPTIMIZED
-    task_t                  task;
-#elif CONFIG_BUS_SIGNAL
-    uintptr_t               task;
-#endif
-} Bus_EndPoint;
+#define BUS_PRIORITY_000 000
+#define BUS_PRIORITY_001 001
+#define BUS_PRIORITY_002 002
+#define BUS_PRIORITY_003 003
+#define BUS_PRIORITY_004 004
+#define BUS_PRIORITY_005 005
+#define BUS_PRIORITY_006 006
+#define BUS_PRIORITY_007 007
+#define BUS_PRIORITY_008 008
+#define BUS_PRIORITY_009 009
+#define BUS_PRIORITY_010 010
+#define BUS_PRIORITY_011 011
+#define BUS_PRIORITY_012 012
+#define BUS_PRIORITY_013 013
+#define BUS_PRIORITY_014 014
+#define BUS_PRIORITY_015 015
 
-#define BUS_REGISTER_FILE(registerfile, pri, regflags)                                      \
-    BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, 0)
+#define _Bus_Attrs(n, pri) ATTRIBUTES(section( "iomem." n # pri ))
 
-#define BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                          \
-    _BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)
-
-#if CONFIG_BUS_SIGNAL == DEF_BUS_SIGNAL_OPTIMIZED
-
-// uhhh... yeah that was totally worth the 3 bytes. lol.
-
-#define BUS_TASK_FROM_EP(t) \
-    GET_TASK_ID_RAW(led_task)
-#define _BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                         \
-    LINKER_DESCRIPTOR_ID(const Bus_EndPoint, "registerfile", registerfile, pri);            \
-    void LINKER_DESCRIPTOR_DATA_NAME(registerfile) ()                                       \
-        ATTRIBUTES(naked, section("registerfile.descriptor" # pri));                        \
-    void LINKER_DESCRIPTOR_DATA_NAME(registerfile) () {                                     \
-        asm(                                                                                \
-            ".word	" #registerfile " \n"                                                   \
-            ".byte	%1 \n"                                                                  \
-            ".byte	%0 \n"                                                                  \
-            ".byte	" #mtask " + 5 \n"                                                          \
-            : /* no output */                                                               \
-            : "M" (regflags), "X" (sizeof(registerfile))                                    \
-        );                                                                                  \
-    }
-#else
-
-#define BUS_TASK_FROM_EP(t) \
-    GET_TASK_ID_WIDE(led_task)
-
-#if CONFIG_BUS_SIGNAL
-#define _BUS_REGISTER_FILE_SET_TASK(mtask) .task = mtask
-#else
-#define _BUS_REGISTER_FILE_SET_TASK(mtask)
-#endif
-
-#define _BUS_REGISTER_FILE_TASK(registerfile, pri, regflags, mtask)                         \
-    LINKER_DESCRIPTOR_DATA(const Bus_EndPoint, "registerfile", registerfile, pri) = {       \
-            .data           = (uint8_t*)&registerfile,                                      \
-            .size           = sizeof(registerfile),                                         \
-            .flags          = regflags,                                                     \
-            _BUS_REGISTER_FILE_SET_TASK(mtask)                                              \
+#define Bus_DefineMemoryMap(regs, pri)                                                      \
+    const Bus_MemMap _iomem_ ## regs _Bus_Attrs("data", pri) = {                            \
+            .data           = (uint8_t*)&regs,                                              \
+            .length         = sizeof(regs),                                                 \
     };                                                                                      \
-    LINKER_DESCRIPTOR_ID(const Bus_EndPoint, "registerfile", registerfile, pri);
+    const uint8_t _iomap_ ## regs _Bus_Attrs("id", pri) = 0xAA; // See comment below for why we set to 0xAA
 
-#endif
+/*
+ * For some reason if this is not initialized, the MPLAB debugger will place NOPs at ADDR 0.
+ * The actual build itself is fine... just whatever the debugger is doing is wrong. It does not
+ * seem to respect the DISCARD section.
+ */
+
 #ifdef	__cplusplus
 }
 #endif

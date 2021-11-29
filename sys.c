@@ -2,10 +2,17 @@
 #include "led.h"
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
-
-
+#include "umap.h"
 static void sys_initIO();
 static void sys_init();
+
+Signal_Publisher(sys_init_io);
+Signal_Publisher(sys_init_early);
+Signal_Publisher(sys_init);
+Signal_Publisher(sys_start);
+Signal_Publisher(sys_finit);
+Signal_Publisher(sys_abort);
+Signal_Publisher(sys_loop);
 
 static volatile Sys_AbortCode   sys_fault;
 
@@ -36,8 +43,9 @@ void sys_abort(Sys_AbortCode code) {
 #if _CONFIG_ABORT_GET_LEDCODE_LONG_EN || _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
     wdt_reset();
     wdt_disable();
-    message_broadcastNow(SystemMessage_Finit, MessageData_Empty);
-    message_broadcastNow(SystemMessage_Abort, MessageData_Empty);
+    
+    signal_dispatch(sys_finit);
+    signal_dispatch(sys_abort);
     
 #if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
     uint8_t count = 0;
@@ -81,23 +89,27 @@ void sys_restart() {
     ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
 }
 
+
 int main () {
-    sys_initIO();
-    message_broadcastNow(SystemMessage_InitIo,      MessageData_Empty);
-    sys_init();
-    message_broadcastNow(SystemMessage_EarlyInit,   MessageData_Empty);
-    message_broadcastNow(SystemMessage_Init,        MessageData_Empty);
+    signal_dispatch(sys_init_io);
+    signal_dispatch(sys_init_early);
+    signal_dispatch(sys_init);
+    
     wdt_reset();
     ENABLE_INTERRUPTS();
-    message_broadcastNow(SystemMessage_Start,       MessageData_Empty);
+    signal_dispatch(sys_start);
     while(1) {
-#if CONFIG_MESSAGE_QUEUE > 0
-        message_dequeueAll();
-#endif
-        message_broadcastNow(SystemMessage_Loop,    MessageData_Empty);
+        signal_dispatch(sys_loop);
         wdt_reset();
     }
+    signal_dispatch(sys_finit);
 }
+
+static void sys_initIO();
+static void sys_init();
+
+SysInitIO_Subscribe(sys_initIO, Signal_Highest);
+SysInitEarly_Subscribe(sys_init, Signal_Highest);
 
 static void sys_initIO() {
 #if CONFIG_HAS_PORT_A

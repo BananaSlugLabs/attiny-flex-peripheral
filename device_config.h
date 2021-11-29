@@ -30,35 +30,21 @@
 /**
  * Maximum LEDs to support.
  */
-#define CONFIG_LED_COUNT                        16
+#define CONFIG_LED_COUNT                        48 // Note: Should ensure that there is about 32 bytes free
     
 #define CONFIG_LED_R_INTENSITY                  0x20
 #define CONFIG_LED_G_INTENSITY                  0x20
 #define CONFIG_LED_B_INTENSITY                  0x20
    
-#define CONFIG_LED_IRQ_PERF                     DEF_DISABLE
+#define CONFIG_LED_IRQ_PERF                     DEF_DISABLE // Ensure CONFIG_TEST_PATTERN is set to something (otherwise this test will do nothing)
 #define CONFIG_LED_IRQ_PORT                     VPORTA
 #define CONFIG_LED_IRQ_PIN                      2               // Reuses SCL pin
     
 // *****************************************************************************
 // **** Command Bus (TWI) ******************************************************
-    
-/**
- * Default I2C device address. When modified at runtime, the value will be stored
- * in the EEPROM.
- */
-#define DEF_BUS_SIGNAL_NORMAL                   1
-#define DEF_BUS_SIGNAL_OPTIMIZED                2
 
 #define CONFIG_BUS_DEFAULT_ADDRESS              0x52
-#define CONFIG_BUS_ENABLE                       DEF_ENABLE
-#define CONFIG_BUS_SIGNAL                       DEF_BUS_SIGNAL_NORMAL
-#define CONFIG_BUS_PERSIST                      DEF_ENABLE
-
-// *****************************************************************************
-// **** Persistence ************************************************************
-
-#define CONFIG_PERSIST                          DEF_ENABLE
+#define CONFIG_BUS_ENABLE                       DEF_ENABLE // disable if CONFIG_LED_IRQ_PERF
 
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
@@ -128,7 +114,7 @@
  * Time in msec to hold the LEDCODE display on. Specify 0 for default.
  */
 #define CONFIG_ABORT_LEDCODE_TIMER_HI           0
-
+ 
 /**
  * Time in msec to hold the LEDCODE display off. Specify 0 for default.
  */
@@ -163,13 +149,13 @@
  */
 #define DEF_TEST_PATTERN_TYPE_UNIFORM_FADE      2
     
-#define CONFIG_TEST_PATTERN                     DEF_DISABLE //DEF_TEST_PATTERN_TYPE_SINGLE_FADE
+#define CONFIG_TEST_PATTERN                     DEF_DISABLE
 #define CONFIG_TEST_PATTERN_TIMESTEP            0
 
 /**
  * Generate a fake "abort" signal. Requires CONFIG_TEST_PATTERN.
  */
-#define CONFIG_TEST_ABORT                       DEF_DISABLE
+#define CONFIG_TEST_ABORT                       DEF_ENABLE
 
 #if CONFIG_LED_IRQ_PERF && CONFIG_BUS_ENABLE
 #error "Cannot enable TWI bus and IRQ performance monitor."

@@ -9,11 +9,20 @@
 #define	SYS_H
 
 #include "common.h"
+#include "umap.h"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
+#define SysInitIO_Subscribe(s,p)        Signal_Subscriber(sys_init_io,          s, p)
+#define SysInitEarly_Subscribe(s,p)     Signal_Subscriber(sys_init_early,       s, p)
+#define SysInit_Subscribe(s,p)          Signal_Subscriber(sys_init,             s, p)
+#define SysStart_Subscribe(s,p)         Signal_Subscriber(sys_start,            s, p)
+#define SysFinit_Subscribe(s,p)         Signal_Subscriber(sys_finit,            s, p)
+#define SysAbort_Subscribe(s,p)         Signal_Subscriber(sys_abort,            s, p)
+#define SysLoop_Subscribe(s,p)          Signal_Subscriber(sys_loop,             s, p)
+    
 typedef enum SysAbortCodeTag {
     SysAbortNone,
     SysAbortBadIRQ                  = 0B0001,

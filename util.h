@@ -11,6 +11,11 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+    
+#define _UTIL_STRY(s)               # s
+#define UTIL_STRY(s)                _UTIL_STRY(s)
+#define _UTIL_PASTE(a,b)            a ## b
+#define UTIL_PASTE(a,b)             _UTIL_PASTE(a,b)
 
 #define DISABLE_INTERRUPTS()    cli()
 #define ENABLE_INTERRUPTS()     sei()
@@ -20,7 +25,7 @@ extern "C" {
 #define LINKER_DESCRIPTOR_ID_NAME(name)         name ## _id
 #define LINKER_DESCRIPTOR_DATA_NAME(name)       name ## _desc
 #define LINKER_DESCRIPTOR_DATA(sec_type, section_name, name, pri)           \
-    sec_type LINKER_DESCRIPTOR_DATA_NAME(name)                        \
+    sec_type LINKER_DESCRIPTOR_DATA_NAME(name)                              \
         ATTRIBUTES(section(section_name ".descriptor" # pri))
 #define LINKER_DESCRIPTOR_ID(sec_type, section_name, name, pri)             \
     const uint8_t LINKER_DESCRIPTOR_ID_NAME(name)                           \

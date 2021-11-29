@@ -1,7 +1,7 @@
 #include "sys.h"
 
-void time_task (message_t message, MessageData data);
-PRIVATE_TASK_DEFINE(time_task, 2);
+static void time_init();
+static void time_loop();
 
 static inline time32_t time_getTime32 ();
 static inline time16_t time_getRtcTime16 ();
@@ -9,41 +9,38 @@ static inline time16_t time_getRtcTime16 ();
 static const uint16_t rtc_overflow_inc = 32768;
 static volatile uint32_t rtc_boottime;
 
-void time_task (message_t message, MessageData data) {
-    switch (message) {
-        case SystemMessage_Init:
-            while (RTC.STATUS > 0) {}
-            //Compare 
-            RTC.CMP = 0x01;
+SysInit_Subscribe(time_init,        Signal_Normal);
+SysLoop_Subscribe(time_loop,        Signal_Normal);
 
-            //Count
-            RTC.CNT = 0x00;
+static void time_loop() {
+    time_getRtcTime16();
+}
 
-            //Period
-            RTC.PER = 0xFFFF;
+static void time_init () {
+    while (RTC.STATUS > 0) {}
+    //Compare 
+    RTC.CMP = 0x01;
 
-            //CMP disabled; OVF enabled; 
-            RTC.INTCTRL = 0x00;
+    //Count
+    RTC.CNT = 0x00;
 
-            //Clock selection
-            RTC.CLKSEL = 0x00;
+    //Period
+    RTC.PER = 0xFFFF;
 
-            //RUNSTDBY disabled; PRESCALER DIV16; RTCEN enabled; 
-            RTC.CTRLA = RTC_PRESCALER_DIV16_gc | RTC_RTCEN_bm;//0x21;/**/
+    //CMP disabled; OVF enabled; 
+    RTC.INTCTRL = 0x00;
 
-            // Wait for all register to be synchronized
-            while (RTC.PITSTATUS > 0) {} 
+    //Clock selection
+    RTC.CLKSEL = 0x00;
 
-            //PI disabled; 
-            RTC.PITINTCTRL = 0x00;
-            break;
-            
-        case SystemMessage_Loop:
-            time_getRtcTime16();
-            break;
-            
-        default: break;
-    }
+    //RUNSTDBY disabled; PRESCALER DIV16; RTCEN enabled; 
+    RTC.CTRLA = RTC_PRESCALER_DIV16_gc | RTC_RTCEN_bm;//0x21;/**/
+
+    // Wait for all register to be synchronized
+    while (RTC.PITSTATUS > 0) {} 
+
+    //PI disabled; 
+    RTC.PITINTCTRL = 0x00;
 }
 
 /**

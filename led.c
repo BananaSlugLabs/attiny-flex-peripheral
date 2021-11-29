@@ -1,15 +1,17 @@
 #include "led.h"
 #include "bus.h"
+#include "sys.h"
 #include "led_internal.h"
 #include <avr/cpufunc.h>
 
-
-
 static void led_init();
 static void led_finit();
-void led_task (message_t message, MessageData data);
+static void led_loop();
 
-PRIVATE_TASK_DEFINE(led_task, 4);
+SysInit_Subscribe(led_init,         Signal_Normal);
+SysFinit_Subscribe(led_finit,       Signal_Normal);
+SysAbort_Subscribe(led_init,        Signal_Normal);
+SysLoop_Subscribe(led_loop,         Signal_Normal);
 
 typedef struct {
     uint8_t     state;
@@ -18,7 +20,7 @@ typedef struct {
 } LedState;
 
 Led_RegisterFile led_registerfile;
-BUS_REGISTER_FILE_TASK(led_registerfile, 1, Bus_FlagReadWrite, BUS_TASK_FROM_EP(led_task));
+Bus_DefineMemoryMap(led_registerfile, BUS_PRIORITY_002);
 
 #define Led (*((LedState*) &_SFR_MEM8(0x001C)))
 
@@ -303,25 +305,14 @@ void led_update() {
     }
 }
 
-void led_task (message_t message, MessageData data) {
-    switch (message) {
-        case SystemMessage_Abort:
-        case SystemMessage_Init:
-            led_init();
-            break;
-        case SystemMessage_Finit:
-            led_finit();
-            break;
-        case SystemMessage_Loop:
-            if (led_registerfile.ctrla & Led_CtrlA_Update) {
-                led_update();
-            }
-            break;
+static void led_loop() {
+    if (led_registerfile.ctrla & Led_CtrlA_Update) {
+        led_update();
+    }
+}
+// Todo: Restore
 #if CONFIG_BUS_SIGNAL
         case BusMessage_Signal(1):
             led_update();
             break;
 #endif
-        default: break;
-    }
-}
