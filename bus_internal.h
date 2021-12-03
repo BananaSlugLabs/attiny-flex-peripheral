@@ -34,7 +34,7 @@ typedef enum {
     Bus_StatusErrorBusy     = (2<<Bus_StatusCode_bp),
     Bus_StatusErrorAccess   = (3<<Bus_StatusCode_bp),
     Bus_StatusErrorCommand  = (4<<Bus_StatusCode_bp),
-    Bus_StatusErrorArgument = (4<<Bus_StatusCode_bp),
+    Bus_StatusErrorArgument = (5<<Bus_StatusCode_bp),
 } bus_status_t;
 
 typedef enum {
