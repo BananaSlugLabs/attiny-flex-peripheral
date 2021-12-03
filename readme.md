@@ -1,4 +1,4 @@
-# tinyAVR Series-0 Flexbean Peripheral (Serial LEDs, IO expansion, and more)
+# tinyAVR Series-0 Multipurpose Peripheral
 
 ## Purpose
 
@@ -51,7 +51,7 @@ The default I2C address is 0x82.
 Memory Map
 
 - `0xF0:0xFF System Control Registers`
-- `0x00:0x7F Mapped Memory Bank
+- `0x00:0x7F Mapped Memory Bank`
 
 Banks
 
