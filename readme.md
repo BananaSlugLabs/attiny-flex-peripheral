@@ -18,7 +18,7 @@ more modular with fewer inter-dependencies without the overhead.
 Features:
 
   - LED Support: Yes
-  - GPIO/KeyPad: No
+  - GPIO/KeyPad: Not Yet
   - Configurable Address: Yes
 
 Device Support:
@@ -65,6 +65,7 @@ Banks
 Addr        Register            Default Value
 
 00          status              0
+            See below...
 01          txCommand           0
             When a transaction is completed this command will be executed.
             Used to, for example, trigger updating of the LEDs after memory
@@ -72,6 +73,20 @@ Addr        Register            Default Value
 02          command             0
             Explicit command to be executed when writing to the control memory.
 03:06       parameters          0
+```
+
+Status Register:
+
+```
+Bits        Field               Meaning
+4:7         Command Status      Used to determine the results of an executed
+                                command.
+                                0: Success
+                                1: In Progress
+                                2: Error - Busy
+                                3: Error - Access
+                                4: Error - Bad Command
+                                5: Error - Bad Argument
 ```
 
 #### System Control Commands
@@ -98,7 +113,9 @@ Addr        Register            Default Value
 Addr        Register            Value
 
 00          controlA            0
-01          controlB            0
+            bit 0:              Update
+            but 1:              Busy
+01          controlB            (Not used)
 02          count               CONFIG_LED_COUNT
 03:n        LedData[GRB888 * count]
 ```
