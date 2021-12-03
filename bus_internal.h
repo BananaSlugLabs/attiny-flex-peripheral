@@ -41,7 +41,8 @@ typedef enum {
     Bus_CommandSetPage      = 1,
     Bus_CommandSetDevAddr   = 2,
     Bus_CommandReset        = 3,
-    Bus_CommandUpdateLed    = 8,
+    Bus_CommandEventFirst   = 8,
+    Bus_CommandEventLast    = 15,
 } bus_command_t;
 
 typedef struct Bus_IOControlTag {

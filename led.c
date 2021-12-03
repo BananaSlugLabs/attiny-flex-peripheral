@@ -6,36 +6,30 @@
 
 static void led_init();
 static void led_finit();
-static void led_loop();
 
+Event_Define(update_led_event, 0, led_update);
 SysInit_Subscribe(led_init,         Signal_Normal);
 SysFinit_Subscribe(led_finit,       Signal_Normal);
 SysAbort_Subscribe(led_init,        Signal_Normal);
-SysLoop_Subscribe(led_loop,         Signal_Normal);
 
 typedef struct {
     uint8_t     state;
     uint8_t     index;
     uint8_t     total;
-} LedState;
+} Led_State;
 
 Led_RegisterFile led_registerfile;
 Bus_DefineMemoryMap(led_registerfile, BUS_PRIORITY_002);
 
-#define Led (*((LedState*) &_SFR_MEM8(0x001C)))
+const Led_Color led_color_black = {0,0,0};
+const Led_Color led_color_white = {CONFIG_LED_R_INTENSITY,CONFIG_LED_G_INTENSITY,CONFIG_LED_B_INTENSITY};
+const Led_Color led_color_red   = {.r = CONFIG_LED_R_INTENSITY};
+const Led_Color led_color_green = {.g = CONFIG_LED_G_INTENSITY};
+const Led_Color led_color_blue  = {.b = CONFIG_LED_B_INTENSITY};
 
-const Led_Color Led_ColorPallet[Led_ColorIndexMax] = {
-    //Pallet_Black
-    {0,0,0},
-    //Pallet_White
-    {255,255,255},
-    //Pallet_Red
-    {.r = CONFIG_LED_R_INTENSITY, .g = 0, .b = 0},
-    //Pallet_Green
-    {.r = 0, .g = CONFIG_LED_G_INTENSITY, .b = 0},
-    //Pallet_Blue
-    {.r = 0, .g = 0, .b = CONFIG_LED_B_INTENSITY}
-};
+// Reduces instruction count... also faster.
+#define Led (*((Led_State*) &_SFR_MEM8(0x001C)))
+//static Led_State Led;
 
 // While less efficient than the run of the mill polled implementation,
 // when interrupts are disabled, we can jump in to the middle of the IRQ handler
@@ -222,7 +216,7 @@ static void led_init() {
     Led.index = 0;
     Led.total = 0;
     
-    led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
+    led_setAll(&led_color_black);
     
     led_registerfile.data.count = CONFIG_LED_COUNT;
     led_registerfile.ctrla      = Led_CtrlA_Update;
@@ -246,21 +240,8 @@ void led_setAll(const Led_Color* color){
     }
 }
 
-void led_setMasked(uint8_t index, const Led_Color* colorA, const Led_Color* colorB, Led_ColorMask mask) {
-    if (index < CONFIG_LED_COUNT) {
-        if (mask & Led_ColorMaskAll) {
-            mask = 0xF;
-        }
-        led_registerfile.data.colors[index].r = mask & 1 ? colorB->r : colorA->r;
-        led_registerfile.data.colors[index].g = mask & 2 ? colorB->g : colorA->g;
-        led_registerfile.data.colors[index].b = mask & 4 ? colorB->b : colorA->b;
-    }
-}
-
 void led_set(uint8_t index, const Led_Color* color) {
-    if (index < CONFIG_LED_COUNT) {
-        led_registerfile.data.colors[index] = *color;
-    }
+    led_registerfile.data.colors[index] = *color;
 }
 
 bool led_isBusy() {
@@ -276,6 +257,10 @@ void led_update() {
         // nothing to do...
         led_registerfile.ctrla = 0;
         return;
+    }
+    
+    if ( led_registerfile.data.count > CONFIG_LED_COUNT) {
+        led_registerfile.data.count = CONFIG_LED_COUNT;
     }
     
     // Report busy & setup registers
@@ -304,15 +289,3 @@ void led_update() {
         }
     }
 }
-
-static void led_loop() {
-    if (led_registerfile.ctrla & Led_CtrlA_Update) {
-        led_update();
-    }
-}
-// Todo: Restore
-#if CONFIG_BUS_SIGNAL
-        case BusMessage_Signal(1):
-            led_update();
-            break;
-#endif

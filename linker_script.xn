@@ -203,6 +203,11 @@ SECTIONS
     _bus_memmap_start = .;
     KEEP (*(SORT_BY_NAME(iomem.data[0-9][0-9][0-9])))
     _bus_memmap_end = .;
+
+    _event_cb_map = .;
+    KEEP (*(SORT_BY_NAME(events.slot[0-7])))
+    
+    _event_cb_map_end = .;
   } AT> text
 
   .data          :

@@ -23,7 +23,6 @@
 #define CONFIG_MESSAGE_QUEUE                    0
 
 #define CONFIG_BREAK_ON_START                   DEF_DISABLE
-    
 // *****************************************************************************
 // **** GPIO Configuration *****************************************************
     
@@ -69,7 +68,7 @@
 // **** Diagnostic Options *****************************************************
 
 /**
- * Never restart after an abort.
+ * Never restart after an abort, halt (i.e. infinite loop).
  */
 #define DEF_ABORT_FLAGS_HALT                    0x0000
 
@@ -79,52 +78,30 @@
 #define DEF_ABORT_FLAGS_RESTART                 0x8000
 
 /**
- * Flashes the LEDs with the error code. (Red-Blue error codes)
- */
-#define DEF_ABORT_FLAGS_LEDCODE_LONG            0x4000
-
-/**
- * Flashes the LEDs (red-black flashing) without an error code. Reduces code space.
- */
-#define DEF_ABORT_FLAGS_LEDCODE_SHORT           0x2000
-
-/**
  * Upon entry to Sys_Abort, execute a soft breakpoint.
  */
 #define DEF_ABORT_FLAGS_BREAKPOINT              0x1000
-#define DEF_ABORT_FLAGS_LEDCODE_COUNT_bm        0x00FF
+
+#define DEF_ABORT_FLAGS_COUNT_bm                0x00FF
 
 /**
- * If > 0, cycle the LEDCODE N times and then restart; Otherwise display LEDCODE
- * indefinitely. Supports upt to 255 cycles.
+ * If > 0, flash the LEDs RED/Black before restarting.
  */
-#define DEF_ABORT_FLAGS_LEDCODE_COUNT(n)        ((n)&DEF_ABORT_FLAGS_LEDCODE_COUNT_bm)
+#define DEF_ABORT_FLAGS_COUNT(n)                ((n)&DEF_ABORT_FLAGS_COUNT_bm)
 
-#if 1
 #define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT         | \
-                                                 DEF_ABORT_FLAGS_LEDCODE_SHORT      | \
                                                  DEF_ABORT_FLAGS_RESTART            | \
-                                                 DEF_ABORT_FLAGS_LEDCODE_COUNT(4))
-#else
-#define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT         | \
-                                                 DEF_ABORT_FLAGS_RESTART)
-#endif
+                                                 DEF_ABORT_FLAGS_COUNT(4))
 
 /**
- * Time in msec to hold the LEDCODE display on. Specify 0 for default.
+ * Time in msec to flash the FAULT led on. Specify 0 for default.
  */
-#define CONFIG_ABORT_LEDCODE_TIMER_HI           0
+#define CONFIG_ABORT_TIMER_HI                   0
  
 /**
- * Time in msec to hold the LEDCODE display off. Specify 0 for default.
+ * Time in msec to flash the FAULT led off. Specify 0 for default.
  */
-#define CONFIG_ABORT_LEDCODE_TIMER_LO           0
-
-#define _CONFIG_ABORT_GET_LEDCODE_COUNT         ((CONFIG_ABORT_FLAGS)  & DEF_ABORT_FLAGS_LEDCODE_COUNT_bm)
-#define _CONFIG_ABORT_GET_LEDCODE_LONG_EN       (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_LEDCODE_LONG)      == DEF_ABORT_FLAGS_LEDCODE_LONG)
-#define _CONFIG_ABORT_GET_LEDCODE_RESTART       (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_RESTART)           == DEF_ABORT_FLAGS_RESTART)
-#define _CONFIG_ABORT_GET_LEDCODE_BREAKPOINT    (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_BREAKPOINT)        == DEF_ABORT_FLAGS_BREAKPOINT)
-#define _CONFIG_ABORT_GET_LEDCODE_SHORT_EN      (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_LEDCODE_SHORT)     == DEF_ABORT_FLAGS_LEDCODE_SHORT)
+#define CONFIG_ABORT_TIMER_LO                   0
 
 /**
  * When CONFIG_SRAM_INIT is DEF_SRAM_INIT_STRIPE/DEF_SRAM_INIT_ZERO, the SRAM is
@@ -135,7 +112,7 @@
 #define DEF_SRAM_INIT_ZERO                      1
 #define DEF_SRAM_INIT_STRIPE                    2
 
-#define CONFIG_SRAM_INIT                        DEF_SRAM_INIT_STRIPE
+#define CONFIG_SRAM_INIT                        DEF_SRAM_INIT_NONE
 
 // *****************************************************************************
 // **** Test Patterns & Simulated Faults ***************************************

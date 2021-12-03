@@ -20,77 +20,62 @@ ISR(BADISR_vect) {
     sys_abort(SysAbortBadIRQ);
 }
 
-#if !defined(CONFIG_ABORT_LEDCODE_TIMER_HI) || CONFIG_ABORT_LEDCODE_TIMER_HI <= 0
-#define _CONFIG_ABORT_LEDCODE_TIMER_HI 1000
+#if !defined(CONFIG_ABORT_TIMER_HI) || CONFIG_ABORT_TIMER_HI <= 0
+#define _CONFIG_ABORT_TIMER_HI 1000
 #else
-#define _CONFIG_ABORT_LEDCODE_TIMER_HI CONFIG_ABORT_LEDCODE_TIMER_HI
+#define _CONFIG_ABORT_TIMER_HI CONFIG_ABORT_TIMER_HI
 #endif
-#if !defined(CONFIG_ABORT_LEDCODE_TIMER_LO) || CONFIG_ABORT_LEDCODE_TIMER_LO <= 0
-#define _CONFIG_ABORT_LEDCODE_TIMER_LO 500
+#if !defined(CONFIG_ABORT_TIMER_LO) || CONFIG_ABORT_TIMER_LO <= 0
+#define _CONFIG_ABORT_TIMER_LO 500
 #else
-#define _CONFIG_ABORT_LEDCODE_TIMER_LO CONFIG_ABORT_LEDCODE_TIMER_LO
+#define _CONFIG_ABORT_TIMER_LO CONFIG_ABORT_TIMER_LO
 #endif
+
+#define _CONFIG_ABORT_COUNT                     ((CONFIG_ABORT_FLAGS)  & DEF_ABORT_FLAGS_COUNT_bm)
+#define _CONFIG_ABORT_RESTART                   (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_RESTART)           == DEF_ABORT_FLAGS_RESTART)
+#define _CONFIG_ABORT_BREAKPOINT                (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_BREAKPOINT)        == DEF_ABORT_FLAGS_BREAKPOINT)
 
 void sys_abort(Sys_AbortCode code) {
     DISABLE_INTERRUPTS();
     
     sys_fault = code;
     
-#if _CONFIG_ABORT_GET_LEDCODE_BREAKPOINT
+#if _CONFIG_ABORT_BREAKPOINT
     DEBUG_BREAKPOINT();
 #endif
     
-#if _CONFIG_ABORT_GET_LEDCODE_LONG_EN || _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
     wdt_reset();
     wdt_disable();
     
     signal_dispatch(sys_finit);
     signal_dispatch(sys_abort);
     
-#if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
-    uint8_t count = 0;
-#endif
-    for (;;) {
-#if _CONFIG_ABORT_GET_LEDCODE_LONG_EN
-        led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
+#if _CONFIG_ABORT_COUNT > 0
+    for (uint8_t count = 0; count < _CONFIG_ABORT_COUNT; count ++) {
+        led_setAll(&led_color_red);
         led_update();
-        time_sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
-        led_setMasked(0, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<3)&Led_ColorMaskAll);
-        led_setMasked(1, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<2)&Led_ColorMaskAll);
-        led_setMasked(2, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<1)&Led_ColorMaskAll);
-        led_setMasked(3, &Led_ColorPallet[Led_ColorRedIndex], &Led_ColorPallet[Led_ColorBlueIndex], (code<<0)&Led_ColorMaskAll);
+        time_sleep(_CONFIG_ABORT_TIMER_HI);
+        led_setAll(&led_color_black);
         led_update();
-        time_sleep(CONFIG_ABORT_LEDCODE_TIMER_HI);
-#elif _CONFIG_ABORT_GET_LEDCODE_SHORT_EN
-        led_setAll(&Led_ColorPallet[Led_ColorBlackIndex]);
-        led_update();
-        time_sleep(_CONFIG_ABORT_LEDCODE_TIMER_LO);
-        led_setAll(&Led_ColorPallet[Led_ColorRedIndex]);
-        led_update();
-        time_sleep(_CONFIG_ABORT_LEDCODE_TIMER_HI);
-#endif
-        
-#if _CONFIG_ABORT_GET_LEDCODE_COUNT > 0
-        if (count >= _CONFIG_ABORT_GET_LEDCODE_COUNT) {
-            break;
-        }
-        count ++;
-#endif
+        time_sleep(_CONFIG_ABORT_TIMER_LO);
     }
 #endif
     
-#if _CONFIG_ABORT_GET_LEDCODE_RESTART
-    ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
+#if _CONFIG_ABORT_RESTART
+    sys_restart();
+#else
+    for (;;) {}
 #endif
-    for (;;);
 }
 
 void sys_restart() {
-    ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
+    for (;;) {
+        ccp_write_io((void*)&(RSTCTRL.SWRR),RSTCTRL_SWRE_bm);
+    }
 }
 
-
 int main () {
+    event_reset();
     signal_dispatch(sys_init_io);
     signal_dispatch(sys_init_early);
     signal_dispatch(sys_init);
@@ -99,6 +84,7 @@ int main () {
     ENABLE_INTERRUPTS();
     signal_dispatch(sys_start);
     while(1) {
+        event_process();
         signal_dispatch(sys_loop);
         wdt_reset();
     }

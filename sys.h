@@ -28,11 +28,11 @@ typedef enum SysAbortCodeTag {
     SysAbortBadIRQ                  = 0B0001,
     SysAbortAssertion               = 0B0010,
     SysAbortMessageQueueExhausted   = 0B0110,
-    SysAbortBadTask                 = 0B0101,
+    SysAbortBadEvent                = 0B0101,
 } Sys_AbortCode;
 
 void sys_abort(Sys_AbortCode code) __attribute__((noreturn));
-void sys_restart();
+void sys_restart() __attribute__((noreturn));
 bool sys_isFaultMode();
 time32_t time_get();
 time32_t time_sleep(timer_interval_t interval);

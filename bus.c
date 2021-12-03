@@ -1,8 +1,7 @@
-
 #include "bus_internal.h"
 #include "sys.h"
-#include "led.h"
 #include "avr/eeprom.h"
+
 /*
  * I2C Bus Interface
  * -----------------------------------------------------------------------------
@@ -168,9 +167,7 @@ ISR(TWI0_TWIS_vect) {
                 
                 case Bus_ReadOnly:
                 {
-                    //uint8_t val = TWI0.SDATA; // since the compiler might optimize out?
-                    // force a read
-                    asm volatile ("" : : "r" (&TWI0.SDATA));
+                    FORCE_READ(TWI0.SDATA); // otherwise the compile optimizes the read
                     TWI0.SCTRLB = TWI_CMD_NACK;
                     break;
                 }
@@ -256,6 +253,7 @@ static void bus_loop() {
                 status = Bus_StatusErrorArgument;
             }
             break;
+            
         case Bus_CommandSetDevAddr:
             param = bus_iomem_control.params[0];
             if (param == 0 || (param & 1)) {
@@ -268,13 +266,18 @@ static void bus_loop() {
                 TWI0.SADDR = param; // should current address be preserved until reset? maybe
             }
             break;
+            
         case Bus_CommandReset:
             status = Bus_StatusSuccess;
             sys_restart();
-                
-        case Bus_CommandUpdateLed:
-            status = Bus_StatusSuccess;
-            led_update();
+            break;
+            
+        case Bus_CommandEventFirst ... Bus_CommandEventLast:
+            if (event_assert_index(command - Bus_CommandEventFirst)) {
+                status = Bus_StatusSuccess;
+            } else {
+                status = Bus_StatusErrorCommand;
+            }
             break;
             
         default:

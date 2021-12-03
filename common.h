@@ -7,18 +7,6 @@
 
 #ifndef COMMON_H
 #define	COMMON_H
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <avr/io.h>
-#include <avr/builtins.h>
-#include <avr/interrupt.h>
-//#include "mcc_generated_files/mcc.h"
-#include <util/atomic.h>
-#include <avr/cpufunc.h>
-#include "device_config.h"
-#include "firmware.h"
 #include "util.h"
 
 /*init_priority (101)*/

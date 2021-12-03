@@ -8,6 +8,19 @@
 #ifndef UTIL_H
 #define	UTIL_H
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <avr/io.h>
+#include <avr/builtins.h>
+#include <avr/interrupt.h>
+//#include "mcc_generated_files/mcc.h"
+#include <util/atomic.h>
+#include <avr/cpufunc.h>
+#include "device_config.h"
+#include "firmware.h"
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -21,7 +34,17 @@ extern "C" {
 #define ENABLE_INTERRUPTS()     sei()
 #define DEBUG_BREAKPOINT()      asm("BREAK")
 #define ATTRIBUTES(x...)        __attribute__ ((x))
+#define POSSIBLY_UNUSED         ATTRIBUTES(unused)
+/**
+ * Read a register even though we do not use the value.
+ * This is to support peripherals which has side effects following
+ * register reads.
+ */
+#define FORCE_READ(v)           asm volatile ("" : : "r" (&v))
 
+extern const uint8_t util_bitmask [8];
+// NO LONGER USED!
+#if 0
 #define LINKER_DESCRIPTOR_ID_NAME(name)         name ## _id
 #define LINKER_DESCRIPTOR_DATA_NAME(name)       name ## _desc
 #define LINKER_DESCRIPTOR_DATA(sec_type, section_name, name, pri)           \
@@ -36,7 +59,7 @@ extern "C" {
      */
 #define LINKER_DESCRIPTOR_ID_NOATTR(sec_type, section_name, name, pri)      \
     const uint8_t LINKER_DESCRIPTOR_ID_NAME(name) 
-
+#endif
 #ifdef	__cplusplus
 }
 #endif
