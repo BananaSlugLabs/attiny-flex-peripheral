@@ -4,7 +4,7 @@
 
 *Figure: Demo board of a key pad & RGB leds. The keypad uses
 (Snaptron BL10280)[https://www.snaptron.com/part-number/bl10280/] back lit
-domes.*
+domes (the first switch is populated).*
 
 ## Purpose
 
