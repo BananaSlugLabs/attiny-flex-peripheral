@@ -1,11 +1,17 @@
-# tinyAVR Series-0 Multipurpose Peripheral
+# tinyAVR Series-0/1 Multipurpose Peripheral
+
+![Example Demonstration](./assets/top.png)
+
+*Figure: Demo board of a key pad & RGB leds. The keypad uses
+[Snaptron BL10280](https://www.snaptron.com/part-number/bl10280/) back lit
+domes (the first switch is populated).*
 
 ## Purpose
 
 I wanted a framework to build modular components in to my design. For example,
 a controller dedicated to keypad input or a driver for those WS2812 LEDs. I
 also wanted to see if I could exploit the AVR architecture to build a WS2812
-driver using the hardware found in ATTINY402 without resorting to bitbanging.
+driver using the hardware found in `ATTINY402` without resorting to bitbanging.
 
 Ideally, you'd drop the chip in to your design, load the firmware, and
 provision the settings in the EEPROM or custom firmware.
@@ -15,31 +21,38 @@ more modular with fewer inter-dependencies without the overhead.
 
 ## Status
 
-Features:
+### Features
 
   - LED Support: Yes
   - GPIO/KeyPad: Not Yet
   - Configurable Address: Yes
 
-Device Support:
+### Supported Devices
 
-  - ATTINY402
+  - `ATTINY402`
+  - Future: `ATTINY40x`, `ATTINY8xx`, `ATTINY16xx`
 
-Future Work:
+Incompatible Devices:
+  - Some tinyAVR Series-1 devices may be supported. `ATTINY412` does not have a
+    LUT0 output. May have been able to use event system but this conflicts with
+    I2C.
 
-  - Support for ATTINY404, ATTINY406, ATTINY804, ATTINY806
+### Future Work:
+
   - Encoders & keypads feature
     - Analog Keypad, Matrix Keypad, Simple Keypad
   - Sleep/Standby
   - Fancy LED Encoding
     - Color spaces (RGB565, Pallet)
     - LED effects feature?
+    - State based colors?
   - Improve EEPROM support to persist defaults (beyond device ID)
   - Transparent SPI bridge variant (direct SPI to WS2812 only)
 
 ## Test Script (using buspirate)
 
-TBD
+A test script is provided in `scripts/ledtest.py`. It uses BusPirate with a
+[I2C clock stretching patch](https://github.com/BananaSlugLabs/Bus_Pirate).
 
 ## Register Files
 
@@ -63,7 +76,7 @@ Banks
 
 ```
 Addr        Register            Default Value
-
+--------------------------------------------------------------------------------
 00          status              0
             See below...
 01          txCommand           0
@@ -79,6 +92,11 @@ Status Register:
 
 ```
 Bits        Field               Meaning
+--------------------------------------------------------------------------------
+0           Reserved
+1           Bus Error           A command was already in progress. Reset when 
+                                the after active command completes & a new one
+                                is written.
 4:7         Command Status      Used to determine the results of an executed
                                 command.
                                 0: Success
@@ -99,7 +117,7 @@ Bits        Field               Meaning
 
 ```
 Addr        Register            Default Value
-
+--------------------------------------------------------------------------------
 00:01       mfg                 0xBA02
 02:03       ident               0x2812
 04:05       capabilities        (None Currently)
@@ -111,7 +129,7 @@ Addr        Register            Default Value
 
 ```
 Addr        Register            Value
-
+--------------------------------------------------------------------------------
 00          controlA            0
             bit 0:              Update
             but 1:              Busy
@@ -126,7 +144,10 @@ Addr        Register            Value
 
 ## Device Support
 
-### ATTINY402 Information
+### `ATTINY402` Information
+
+![ATTINY402 Schematic](./assets/attiny402.png)
+*Figure: Reference design for `ATTINY402`.*
 
 Pinout:
 
@@ -146,10 +167,10 @@ Pinout:
 Using a typical build configuration, the software as of Dec 2nd 2021, consumed
 the following memory resources:
 
-- Stack: Estimated to be less than 32-bytes (needs validation)
-- Data memory: 176 bytes (supports 48 LEDs)
-- Program memory: 2327 bytes
-  - Stripped down: 2126 bytes
+- SRAM memory: 177 bytes (supports 48 LEDs)
+  - Stack: 26 (32-bytes est. worst case?)
+  - Available Memory: 223 bytes
+- Program memory: 2297 bytes
 - EEPROM: 1 byte
 
 ### KeyPad Notes

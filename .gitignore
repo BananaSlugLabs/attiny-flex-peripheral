@@ -5,3 +5,4 @@ nbproject/Makefile-*
 nbproject/Package-*
 nbproject/Makefile-*
 nbproject/private/
+scripts/buspirate/__pycache__/

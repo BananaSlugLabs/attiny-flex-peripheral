@@ -1,21 +1,22 @@
 #include "sys.h"
 
-static void time_init();
-static void time_loop();
+// Note: This code hasn't been fully tested as it hasn't been used extensively in
+// the codebase. The most of this could could likely be removed.
 
+static void time_init();
+
+#if !CONFIG_RTC_SIMPLIFIED_DRIVER
+static void time_loop();
 static inline time32_t time_getTime32 ();
 static inline time16_t time_getRtcTime16 ();
 
 static const uint16_t rtc_overflow_inc = 32768;
 static volatile uint32_t rtc_boottime;
 
-SysInit_Subscribe(time_init,        Signal_Normal);
 SysLoop_Subscribe(time_loop,        Signal_Normal);
+#endif
 
-static void time_loop() {
-    time_getRtcTime16();
-}
-
+SysInit_Subscribe(time_init,        Signal_Normal);
 static void time_init () {
     while (RTC.STATUS > 0) {}
     //Compare 
@@ -41,6 +42,11 @@ static void time_init () {
 
     //PI disabled; 
     RTC.PITINTCTRL = 0x00;
+}
+#if !CONFIG_RTC_SIMPLIFIED_DRIVER
+
+static void time_loop() {
+    time_getRtcTime16();
 }
 
 /**
@@ -107,4 +113,24 @@ time32_t time_sleep(timer_interval_t interval) {
         }
     }
 }
+#else
 
+time32_t time_sleep(timer_interval_t interval) {
+    uint16_t start, now, delta;
+    
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        start =  RTC.CNT;
+    }
+    
+    for (;;) {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            now =  RTC.CNT;
+        }
+        delta = now-start;
+        if (delta>interval) {
+            return delta;
+        }
+    }
+}
+
+#endif

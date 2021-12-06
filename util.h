@@ -19,7 +19,6 @@
 #include <util/atomic.h>
 #include <avr/cpufunc.h>
 #include "device_config.h"
-#include "firmware.h"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -35,6 +34,25 @@ extern "C" {
 #define DEBUG_BREAKPOINT()      asm("BREAK")
 #define ATTRIBUTES(x...)        __attribute__ ((x))
 #define POSSIBLY_UNUSED         ATTRIBUTES(unused)
+
+#define _UTIL_SectionAttrs(section_name, additional...) \
+    ATTRIBUTES(section( section_name ), additional)
+
+#define _UTIL_NakedSectionAttrs(section_name, additional...) \
+    _UTIL_SectionAttrs(section_name, naked, noinline, used, additional)
+
+#define Priority_Highest            100
+#define Priority_High               300
+#define Priority_Normal             500
+#define Priority_Low                700
+#define Priority_Lowest             900
+
+#define Priority_nHighest           900
+#define Priority_nHigh              700
+#define Priority_nNormal            500
+#define Priority_nLow               300
+#define Priority_nLowest            100
+
 /**
  * Read a register even though we do not use the value.
  * This is to support peripherals which has side effects following
@@ -42,24 +60,26 @@ extern "C" {
  */
 #define FORCE_READ(v)           asm volatile ("" : : "r" (&v))
 
+/* FOR DISCARD SECTIONS in linker script...
+ * 
+ * MPLab X's debugger has a software defect where it treats uninitialized values
+ * in discard sections of the linker script to be set to 0s when loading
+ * firmware. Thus will begin to clear the memory at 0x8000 (0x0). It does not
+ * impact the hex files as this is handled with objcopy. 
+ * 
+ * For some reason setting a random value causes the debugger to properly handle
+ * the discard section.
+ */
+#define _MPLABX_WORKAROUD = 0xAA 
+
+// Not used currently...
 extern const uint8_t util_bitmask [8];
-// NO LONGER USED!
-#if 0
-#define LINKER_DESCRIPTOR_ID_NAME(name)         name ## _id
-#define LINKER_DESCRIPTOR_DATA_NAME(name)       name ## _desc
-#define LINKER_DESCRIPTOR_DATA(sec_type, section_name, name, pri)           \
-    sec_type LINKER_DESCRIPTOR_DATA_NAME(name)                              \
-        ATTRIBUTES(section(section_name ".descriptor" # pri))
-#define LINKER_DESCRIPTOR_ID(sec_type, section_name, name, pri)             \
-    const uint8_t LINKER_DESCRIPTOR_ID_NAME(name)                           \
-        ATTRIBUTES(section(section_name ".id" # pri)) = 0xAA
-    /* WORKAROUD: 0xAA is needed because...microchip f***ing sucks.
-     * Don't try to make sense of it. The debugger will program the device
-     * incorrectly.
-     */
-#define LINKER_DESCRIPTOR_ID_NOATTR(sec_type, section_name, name, pri)      \
-    const uint8_t LINKER_DESCRIPTOR_ID_NAME(name) 
-#endif
+
+typedef uint8_t     timer_handle_t;
+typedef uint16_t    timer_interval_t; // in msec
+typedef uint16_t    time16_t; // in msec
+typedef uint32_t    time32_t; // in msec
+
 #ifdef	__cplusplus
 }
 #endif

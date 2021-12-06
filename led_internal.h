@@ -75,7 +75,7 @@ typedef struct RegisterFileTag {
 
 
 #define LED_BAUD(BAUD_RATE)             (((float)(F_CPU * 64) / (2 * (float)BAUD_RATE)) + 0.5)
-#define LED_RESET_LENGTH                100
+#define LED_RESET_LENGTH                15
 
 #define LED_STATE_IDLE                  0
 #define LED_STATE_RESET                 1

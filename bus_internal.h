@@ -23,27 +23,12 @@ typedef enum {
     Bus_Error               = 6,
 } bus_state_t;
 
-typedef enum {
-    Bus_StatusBusy          = (1<<0),
-            
-    Bus_StatusCode_bp       = (4),
-    Bus_StatusCode_bm       = (0xF<<Bus_StatusCode_bp),
-            
-    Bus_StatusSuccess       = (0<<Bus_StatusCode_bp),
-    Bus_StatusInProgress    = (1<<Bus_StatusCode_bp),
-    Bus_StatusErrorBusy     = (2<<Bus_StatusCode_bp),
-    Bus_StatusErrorAccess   = (3<<Bus_StatusCode_bp),
-    Bus_StatusErrorCommand  = (4<<Bus_StatusCode_bp),
-    Bus_StatusErrorArgument = (5<<Bus_StatusCode_bp),
-} bus_status_t;
 
 typedef enum {
     Bus_CommandSetPage      = 1,
     Bus_CommandSetDevAddr   = 2,
     Bus_CommandReset        = 3,
-    Bus_CommandEventFirst   = 8,
-    Bus_CommandEventLast    = 15,
-} bus_command_t;
+} bus_internal_command_t;
 
 typedef struct Bus_IOControlTag {
     bus_status_t        status;
@@ -73,6 +58,8 @@ typedef struct Bus_StateTag {
     uint8_t             offset;
     bus_command_t       command;
 } Bus_State;
+
+
 
 #ifdef	__cplusplus
 }

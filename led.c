@@ -6,8 +6,10 @@
 
 static void led_init();
 static void led_finit();
+static bus_status_t led_update_cmd(bus_command_t command);
 
-Event_Define(update_led_event, 0, led_update);
+Bus_DefineCommand(led_update_cmd, 0xFF, 0x08);
+
 SysInit_Subscribe(led_init,         Signal_Normal);
 SysFinit_Subscribe(led_finit,       Signal_Normal);
 SysAbort_Subscribe(led_init,        Signal_Normal);
@@ -288,4 +290,9 @@ void led_update() {
             }
         }
     }
+}
+
+static bus_status_t led_update_cmd(bus_command_t command) {
+    led_update();
+    return Bus_StatusSuccess; // could improve by only setting after LED chain updated.
 }

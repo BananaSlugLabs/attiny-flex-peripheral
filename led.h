@@ -9,7 +9,6 @@
 #define	LED_H
 
 #include "common.h"
-#include "umap.h"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -32,7 +31,6 @@ void led_setAll(const Led_Color* color);
 bool led_isBusy();
 void led_update();
 
-Event_Declare(update_led_event, 0, led_update);
 
 #ifdef	__cplusplus
 }
