@@ -210,13 +210,10 @@ SCK. TCB.WO is fed to the CCL to control the SR latch SET signal. The pulse is
 
 Implemented as a SET/RESET latch.
 
-The latch is asserted when `Event(TCB) & XCK`.
+The latch is asserted when `!Event(TCB) & XCK & TCB.WO`.
 
 The latch is cleared when `(Event(TCB) & USART.XCK & USART.TX) | (Event(TCB) & 
-!USART.XCK)`.
-
-(Actually, that's not 100% correct; I need to go take a 2nd look at the logic.
-With that said... it 'works' fine.)
+!USART.XCK)`. (This may be off. Need to revisit. See image below.)
 
 ![ATTINY402 CCL LUT0](./assets/attiny402-lut0.png)
 
