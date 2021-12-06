@@ -3,7 +3,7 @@
 ![Example Demonstration](./assets/top.png)
 
 *Figure: Demo board of a key pad & RGB leds. The keypad uses
-(Snaptron BL10280)[https://www.snaptron.com/part-number/bl10280/] back lit
+[Snaptron BL10280](https://www.snaptron.com/part-number/bl10280/) back lit
 domes (the first switch is populated).*
 
 ## Purpose
@@ -52,7 +52,7 @@ Incompatible Devices:
 ## Test Script (using buspirate)
 
 A test script is provided in `scripts/ledtest.py`. It uses BusPirate with a
-(I2C clock stretching patch)[https://github.com/BananaSlugLabs/Bus_Pirate].
+[I2C clock stretching patch](https://github.com/BananaSlugLabs/Bus_Pirate).
 
 ## Register Files
 
