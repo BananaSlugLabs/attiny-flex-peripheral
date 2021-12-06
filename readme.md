@@ -51,7 +51,8 @@ Incompatible Devices:
 
 ## Test Script (using buspirate)
 
-TBD
+A test script is provided in `scripts/ledtest.py`. It uses BusPirate with a
+(I2C clock stretching patch)[https://github.com/BananaSlugLabs/Bus_Pirate].
 
 ## Register Files
 
@@ -93,8 +94,9 @@ Status Register:
 Bits        Field               Meaning
 --------------------------------------------------------------------------------
 0           Reserved
-1           Bus Error           Command was already in progress. Reset when the
-                                next command begins execution.
+1           Bus Error           A command was already in progress. Reset when 
+                                the after active command completes & a new one
+                                is written.
 4:7         Command Status      Used to determine the results of an executed
                                 command.
                                 0: Success
