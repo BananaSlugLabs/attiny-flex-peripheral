@@ -23,7 +23,7 @@ __boot_init:
     ldi r16, 0xFF
     ldi r17, 0xAA
     ldi r18, 0x55
-    ldi r19, 0x00
+    ldi r19, 0xA5
 #elif CONFIG_SRAM_INIT == DEF_SRAM_INIT_ZERO 
     eor	r16, r16
     eor	r17, r17

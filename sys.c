@@ -2,7 +2,7 @@
 #include "led.h"
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
-#include "umap.h"
+#include "signal.h"
 static void sys_initIO();
 static void sys_init();
 
@@ -20,20 +20,44 @@ ISR(BADISR_vect) {
     sys_abort(SysAbortBadIRQ);
 }
 
-#if !defined(CONFIG_ABORT_TIMER_HI) || CONFIG_ABORT_TIMER_HI <= 0
-#define _CONFIG_ABORT_TIMER_HI 1000
-#else
-#define _CONFIG_ABORT_TIMER_HI CONFIG_ABORT_TIMER_HI
-#endif
-#if !defined(CONFIG_ABORT_TIMER_LO) || CONFIG_ABORT_TIMER_LO <= 0
-#define _CONFIG_ABORT_TIMER_LO 500
-#else
-#define _CONFIG_ABORT_TIMER_LO CONFIG_ABORT_TIMER_LO
-#endif
-
 #define _CONFIG_ABORT_COUNT                     ((CONFIG_ABORT_FLAGS)  & DEF_ABORT_FLAGS_COUNT_bm)
 #define _CONFIG_ABORT_RESTART                   (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_RESTART)           == DEF_ABORT_FLAGS_RESTART)
 #define _CONFIG_ABORT_BREAKPOINT                (((CONFIG_ABORT_FLAGS) & DEF_ABORT_FLAGS_BREAKPOINT)        == DEF_ABORT_FLAGS_BREAKPOINT)
+
+#ifndef CONFIG_ABORT_COLOR1
+#define CONFIG_ABORT_COLOR1                     DEF_ABORT_COLOR_RED
+#endif
+#ifndef CONFIG_ABORT_COLOR2
+#define CONFIG_ABORT_COLOR2                     DEF_ABORT_COLOR_BLACK
+#endif
+
+#if CONFIG_ABORT_COLOR1 == DEF_ABORT_COLOR_BLACK
+#define _CONFIG_ABORT_COLOR1 led_color_black
+#elif CONFIG_ABORT_COLOR1 == DEF_ABORT_COLOR_RED
+#define _CONFIG_ABORT_COLOR1 led_color_red
+#elif CONFIG_ABORT_COLOR1 == DEF_ABORT_COLOR_GREEN
+#define _CONFIG_ABORT_COLOR1 led_color_green
+#elif CONFIG_ABORT_COLOR1 == DEF_ABORT_COLOR_BLUE
+#define _CONFIG_ABORT_COLOR1 led_color_blue
+#elif CONFIG_ABORT_COLOR1 == DEF_ABORT_COLOR_WHITE
+#define _CONFIG_ABORT_COLOR1 led_color_white
+#else
+#error "Invalid CONFIG_ABORT_COLOR1 selected."
+#endif
+
+#if CONFIG_ABORT_COLOR2 == DEF_ABORT_COLOR_BLACK
+#define _CONFIG_ABORT_COLOR2 led_color_black
+#elif CONFIG_ABORT_COLOR2 == DEF_ABORT_COLOR_RED
+#define _CONFIG_ABORT_COLOR2 led_color_red
+#elif CONFIG_ABORT_COLOR2 == DEF_ABORT_COLOR_GREEN
+#define _CONFIG_ABORT_COLOR2 led_color_green
+#elif CONFIG_ABORT_COLOR2 == DEF_ABORT_COLOR_BLUE
+#define _CONFIG_ABORT_COLOR2 led_color_blue
+#elif CONFIG_ABORT_COLOR2 == DEF_ABORT_COLOR_WHITE
+#define _CONFIG_ABORT_COLOR2 led_color_white
+#else
+#error "Invalid CONFIG_ABORT_COLOR1 selected."
+#endif
 
 void sys_abort(Sys_AbortCode code) {
     DISABLE_INTERRUPTS();
@@ -52,12 +76,12 @@ void sys_abort(Sys_AbortCode code) {
     
 #if _CONFIG_ABORT_COUNT > 0
     for (uint8_t count = 0; count < _CONFIG_ABORT_COUNT; count ++) {
-        led_setAll(&led_color_red);
+        led_setAll(&_CONFIG_ABORT_COLOR1);
         led_update();
-        time_sleep(_CONFIG_ABORT_TIMER_HI);
-        led_setAll(&led_color_black);
+        time_sleep(CONFIG_ABORT_TIMER_HI);
+        led_setAll(&_CONFIG_ABORT_COLOR2);
         led_update();
-        time_sleep(_CONFIG_ABORT_TIMER_LO);
+        time_sleep(CONFIG_ABORT_TIMER_LO);
     }
 #endif
     
@@ -75,7 +99,6 @@ void sys_restart() {
 }
 
 int main () {
-    event_reset();
     signal_dispatch(sys_init_io);
     signal_dispatch(sys_init_early);
     signal_dispatch(sys_init);
@@ -84,7 +107,6 @@ int main () {
     ENABLE_INTERRUPTS();
     signal_dispatch(sys_start);
     while(1) {
-        event_process();
         signal_dispatch(sys_loop);
         wdt_reset();
     }

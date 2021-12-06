@@ -34,7 +34,6 @@
  */
 
 #if CONFIG_BUS_ENABLE
-
 Bus_State               bus_state;
 
 extern const Bus_MemMap _bus_memmap_start;
@@ -47,9 +46,9 @@ Bus_IONvmConfig         bus_iomem_nvm EEMEM = {
 };
 
 const Bus_IODeviceInfo  bus_iomem_devinfo = {
-    .mfg                = 0xBA02,
-    .ident              = FW_IDENT,
-    .version            = FW_VERSION,
+    .mfg                = CONFIG_FW_MFG,
+    .ident              = CONFIG_FW_IDENT,
+    .version            = CONFIG_FW_VERSION,
 };
 
 Bus_IOControl           bus_iomem_control;
@@ -57,6 +56,8 @@ Bus_IOControl           bus_iomem_control;
 const Bus_MemMap        bus_iomap_control       = { .data = (uint8_t*)&bus_iomem_control, .length = sizeof(bus_iomem_control) };
 const Bus_MemMap        bus_iomap_deviceInfo    = { .data = (uint8_t*)&bus_iomem_devinfo, .length = sizeof(bus_iomem_devinfo) };
 
+extern const Bus_Command _bus_command_map_start[1];
+extern const Bus_Command _bus_command_map_end[1];
 
 Bus_DefineMemoryMap(bus_iomem_control, BUS_PRIORITY_000); // always slot 0
 Bus_DefineMemoryMap(bus_iomem_devinfo, BUS_PRIORITY_001); // always slot 1
@@ -90,7 +91,6 @@ ISR(TWI0_TWIS_vect) {
         } else {
             {
                 uint8_t command;
-                TWI0.SCTRLB = TWI_CMD_DONE;
                 
                 if (bus_state.state != Bus_ReadWrite) { // No writes were performed
                     command = 0;
@@ -102,12 +102,21 @@ ISR(TWI0_TWIS_vect) {
                 }
                 
                 if (command > 0) {
-                    bus_iomem_control.status = (bus_iomem_control.status & ~Bus_StatusCode_bm) | Bus_StatusInProgress;
-                    bus_state.command = command;
-                    bus_state.state = Bus_IoFinish;
+                    if (bus_state.command != 0) {
+                        // Only one command active at a time...
+                        bus_iomem_control.status |= Bus_StatusBusError;
+                        bus_state.state = Bus_Idle;
+                    } else {
+                        // Reset busy flag after next successful command...
+                        bus_iomem_control.status = (bus_iomem_control.status & (~Bus_StatusCode_bm | Bus_StatusBusError)) | Bus_StatusInProgress;
+                        bus_state.command = command;
+                        bus_state.state = Bus_IoFinish;
+                    }
                 } else {
                     bus_state.state = Bus_Idle;
                 }
+                // need to defer this since we can't meet timing requirements. May have to replicate in other cases.
+                TWI0.SCTRLB = TWI_CMD_DONE;
             }
         }
         return;
@@ -184,7 +193,6 @@ ISR(TWI0_TWIS_vect) {
     }
 }
 
-
 static void bus_init();
 static void bus_finit();
 static void bus_loop();
@@ -234,58 +242,83 @@ static void bus_finit() {
     TWI0.SCTRLA &= ~TWI_ENABLE_bm;
 }
 
+void bus_commandUpdateStatusIRQ (uint8_t status) {
+    bus_iomem_control.status = (bus_iomem_control.status & ~Bus_StatusCode_bm) | status;
+    
+    if (status != Bus_StatusInProgress) {
+        DEBUG_BREAKPOINT();
+        bus_state.command = 0;
+    }
+}
+
+bus_command_t bus_getActiveCommand () {
+    return bus_state.command;
+}
+
+void bus_commandUpdateStatus (uint8_t status) {
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        bus_commandUpdateStatusIRQ(status);
+    }
+}
+
 static void bus_loop() {
     if ( bus_state.state == Bus_IoFinish ) {
-        bus_status_t status;
-        uint8_t param;
-        bus_command_t command = bus_state.command;
-        bus_state.command = 0;
-        bus_state.state = Bus_Idle;
+        bus_status_t status         = Bus_StatusInProgress;
+        bus_command_t command       = bus_state.command;
+        bus_state.state             = Bus_Idle;
         
-        // TODO: Use a lookup table.
-        switch (command) {
-        case Bus_CommandSetPage:
-            param = bus_iomem_control.params[0];
-            if (param > 0 && param < Map_Count()) {
-                bus_state.page = param;
-                status = Bus_StatusSuccess;
-            } else {
-                status = Bus_StatusErrorArgument;
+        bus_commandUpdateStatus(Bus_StatusInProgress);
+        
+        if (command < 8) {
+            uint8_t param;
+            DEBUG_BREAKPOINT();
+            switch (command) {
+            case Bus_CommandSetPage:
+                param = bus_iomem_control.params[0];
+                if (param > 0 && param < Map_Count()) {
+                    bus_state.page = param;
+                    status = Bus_StatusSuccess;
+                } else {
+                    status = Bus_StatusErrorArgument;
+                }
+                break;
+
+            case Bus_CommandSetDevAddr:
+                param = bus_iomem_control.params[0];
+                if (param == 0 || (param & 1)) {
+                    status = Bus_StatusErrorArgument;
+                } else {
+                    status = Bus_StatusSuccess;
+                }
+                if (param!=eeprom_read_byte(&bus_iomem_nvm.deviceAddress)) {
+                    eeprom_write_byte(&bus_iomem_nvm.deviceAddress, param);
+                }
+                break;
+
+            case Bus_CommandReset:
+                //status = Bus_StatusSuccess; // reset never has an opportunity to report the status
+                sys_restart();
+                break;
+
+            default:
+                status = Bus_StatusErrorCommand;
+                break;
             }
-            break;
-            
-        case Bus_CommandSetDevAddr:
-            param = bus_iomem_control.params[0];
-            if (param == 0 || (param & 1)) {
-                status = Bus_StatusErrorArgument;
-            } else {
-                status = Bus_StatusSuccess;
+        } else {
+            bool found = false;
+            for (const Bus_Command* cmd = _bus_command_map_start;
+                    cmd <= _bus_command_map_end;
+                    cmd ++) {
+                if ((cmd->mask & command) == cmd->match) {
+                    status = cmd->handler(command);
+                    found = true;
+                }
             }
-            if (param!=eeprom_read_byte(&bus_iomem_nvm.deviceAddress)) {
-                eeprom_write_byte(&bus_iomem_nvm.deviceAddress, param);
-                TWI0.SADDR = param; // should current address be preserved until reset? maybe
-            }
-            break;
-            
-        case Bus_CommandReset:
-            status = Bus_StatusSuccess;
-            sys_restart();
-            break;
-            
-        case Bus_CommandEventFirst ... Bus_CommandEventLast:
-            if (event_assert_index(command - Bus_CommandEventFirst)) {
-                status = Bus_StatusSuccess;
-            } else {
+            if (!found) {
                 status = Bus_StatusErrorCommand;
             }
-            break;
-            
-        default:
-            status = Bus_StatusErrorCommand;
-            break;
         }
-        
-        bus_iomem_control.status = (bus_iomem_control.status & ~Bus_StatusCode_bm) | status;
+        bus_commandUpdateStatus(status);
     }
 }
 #endif
