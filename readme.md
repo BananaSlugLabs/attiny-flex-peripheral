@@ -201,23 +201,38 @@ The interrupt service routine takes approximately 1-2uSec to execute.
 #### TCB
 
 TCB timer is configured in single pulse mode that triggers on both edges of
-SCK. TCB.WO is fed to the CCL to control the SR latch SET signal.
+SCK. TCB.WO is fed to the CCL to control the SR latch SET signal. The pulse is
+200ns.
+
+![ATTINY402 TCB](./assets/attiny402-tcb.png)
 
 #### CCL
 
 Implemented as a SET/RESET latch.
 
-The latch is asserted when `XCK & TCB.WO0`.
+The latch is asserted when `!Event(TCB) & XCK & TCB.WO`.
 
-The latch is cleared when `(Event(TCB) & !TX) | (Event(TCB) & !XCK)`.
+The latch is cleared when `(Event(TCB) & USART.XCK & USART.TX) | (Event(TCB) & 
+!USART.XCK)`. (This may be off. Need to revisit. See image below.)
+
+![ATTINY402 CCL LUT0](./assets/attiny402-lut0.png)
+
+![ATTINY402 CCL LUT1](./assets/attiny402-lut1.png)
+
+#### Event System
+
+`USART.XCK` is routed to PORTA3 which is then fed back in to the event system
+to trigger TCB0. The CCL Event1 is not used and can be removed.
+
+![ATTINY402 Event System](./assets/attiny402-evsys.png)
 
 #### GPIO Restrictions
 
 This implementation minimizes the PINs that are required to be allocated for
 this purpose. The following restrictions apply:
 
-  - XCK (unavailable)
-    Potentially available as input.
+  - XCK (unavailable):
+    Potentially available when LEDs are not updating.
 
 #### A word of warning...
 
