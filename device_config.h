@@ -118,6 +118,11 @@
 
 #include CONFIG_DEVICE_INCLUDE
 
+// Note: Rebuild after including file (since this won't get picked up by make)
+#if __has_include("local_config.h")
+#include "local_config.h"
+#endif
+
 // *****************************************************************************
 // **** Defaults: System & Diagnostics *****************************************
 // *****************************************************************************
