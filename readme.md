@@ -191,7 +191,7 @@ Default calibration is:
 
 This is appropriate for a 4x4 keypad[^1] constructed as described in
 [sgmne's current sense keypad](https://github.com/sgmne/AnalogKeypad). This provides
-a more linear result. Recommend keypads have solid read ground plane to reduce noise.
+a more linear result. Recommend keypads have solid rear ground plane to reduce noise.
 
 There is an CONFIG_KP_HISTORY option that changes this layout, but this feature was
 used primarily to for testing.
@@ -249,6 +249,7 @@ If standby proves unstable, consider enabling idle:
 ```
 
 Another parameter that may be worth changing:
+
 ```
 #define CONFIG_SLEEP_TIMEOUT                    4000
 ```
