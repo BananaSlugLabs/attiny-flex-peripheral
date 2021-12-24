@@ -29,7 +29,7 @@ Pin 7: XCK can be repurposed when USART is inactive.
 
 This section needs to be completed.
 
-See [test & validation](docs/test-validation.md) report for details about power
+See [test & validation](test-validation.md) report for details about power
 management. Defaults to standby.
 
 If standby proves unstable, consider enabling idle:
