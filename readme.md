@@ -40,6 +40,7 @@ more modular with fewer inter-dependencies without the overhead.
   - LED Support: Yes (RGB888)
   - KeyPad: Analog (Preliminary)
   - Configurable Address: Yes
+  - Sleep: Idle, Standby, Powerdown (Default: Standby)
 
 ### Supported Devices
 
@@ -233,6 +234,24 @@ Pin 7: XCK can be repurposed when USART is inactive.
 See [test & validation](docs/test-validation.md) report.
 
 ## Implementation Notes
+
+### Power Management
+
+This section needs to be completed.
+
+See [test & validation](docs/test-validation.md) report for details about power
+management. Defaults to standby.
+
+If standby proves unstable, consider enabling idle:
+
+```
+#define CONFIG_SLEEP                            DEF_SLEEP_IDLE
+```
+
+Another parameter that may be worth changing:
+```
+#define CONFIG_SLEEP_TIMEOUT                    4000
+```
 
 ### KeyPad Notes
 
