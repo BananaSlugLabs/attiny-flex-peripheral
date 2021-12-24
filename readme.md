@@ -188,7 +188,7 @@ Default calibration is:
 - Filter: 64
 - Steady State Window: +/- 0.0325V
 
-This is appropriate for a 4x4 keypad constructed as described in
+This is appropriate for a 4x4 keypad[^1] constructed as described in
 [sgmne's current sense keypad](https://github.com/sgmne/AnalogKeypad). This provides
 a more linear result. Recommend keypads have solid read ground plane to reduce noise.
 
@@ -318,3 +318,6 @@ Feel free to contact opensource@bananasluglabs.com.
 
 Please reach out to let me know if you find this useful or have included it in
 a product or project.
+
+[^1]: Example keypad schematic: <br>
+     <img src="./assets/keypad-sch.png" width="70%" align="center">
