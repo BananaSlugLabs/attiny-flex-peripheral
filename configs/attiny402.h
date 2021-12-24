@@ -8,7 +8,6 @@
 #ifndef ATTINY402_H
 #define	ATTINY402_H
 
-#define CONFIG_DEVICE                           DEF_DEVICE_ATTINY402
 #define CONFIG_HAS_PORT_A                       DEF_ENABLE
 #define CONFIG_PORT_A_OUT                       0x00
 #define CONFIG_PORT_A_DIR                       0x08
