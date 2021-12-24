@@ -75,6 +75,29 @@
  */
 #define DEF_SRAM_INIT_STRIPE                    2
 
+// ==== CONFIG_SLEEP ===========================================================
+/**
+ * Support idle sleep mode.
+ */
+#define DEF_SLEEP_IDLE                          1
+/**
+ * Support standby mode after X milliseconds. Enabling 
+ * CONFIG_STANDBY_SLOWCLOCK further reduces power consumption.
+ */
+#define DEF_SLEEP_STANDBY                       2
+/**
+ * Not implemented.
+ */
+#define DEF_SLEEP_POWERDOWN                     3
+/**
+ * Test mode to validate standby sequencing.
+ */
+#define DEF_SLEEP_PRETEND                       4
+
+// *****************************************************************************
+// **** KeyPad Driver **********************************************************
+// *****************************************************************************
+
 // *****************************************************************************
 // **** Test Application *******************************************************
 // *****************************************************************************
@@ -119,22 +142,36 @@
 #endif
 #define F_CPU                                   CONFIG_CLOCK
 
+// ==== CONFIG_SLEEP ===========================================================
+#ifndef CONFIG_SLEEP
+#define CONFIG_SLEEP                            DEF_SLEEP_STANDBY
+#endif
+
+// ==== CONFIG_SLEEP_TIMEOUT ===================================================
+/*
+ * Amount of time to spent idling before going to standby.
+ */
+#ifndef CONFIG_SLEEP_TIMEOUT
+#define CONFIG_SLEEP_TIMEOUT                    1500
+#endif
+#if CONFIG_SLEEP_TIMEOUT < 0
+#error "Sleep timeout must be > 0."
+#endif
+
+// ==== CONFIG_STANDBY_SLOWCLOCK ===============================================
+/*
+ * Reduces the clock from 20MHz to 800KHz
+ */
+#ifndef CONFIG_STANDBY_SLOWCLOCK
+#define CONFIG_STANDBY_SLOWCLOCK                DEF_ENABLE
+#endif
+
 // ==== CONFIG_ABORT_FLAGS =====================================================
 // ... Repeat a sequence of 
 #ifndef CONFIG_ABORT_FLAGS
 #define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT | \
                                                  DEF_ABORT_FLAGS_RESTART    | \
                                                  DEF_ABORT_FLAGS_COUNT(4))
-#endif
-
-
-
-// ==== CONFIG_RTC_SIMPLIFIED_DRIVER ===========================================
-/**
- * Minimize the timer driver since most of the functionality is not used.
- */
-#ifndef CONFIG_RTC_SIMPLIFIED_DRIVER
-#define CONFIG_RTC_SIMPLIFIED_DRIVER            DEF_ENABLE
 #endif
 
 // ==== CONFIG_ABORT_TIMER_HI & CONFIG_ABORT_TIMER_LO ==========================
@@ -167,42 +204,40 @@
  * stack utilization information.
  */
 #ifndef CONFIG_SRAM_INIT
-#define CONFIG_SRAM_INIT                        DEF_SRAM_INIT_NONE
+#define CONFIG_SRAM_INIT                        DEF_SRAM_INIT_STRIPE
 #endif
 
 // *****************************************************************************
 // **** LED Configuration ******************************************************
 // *****************************************************************************
 
-
-// ==== CONFIG_DEVICE ==========================================================
+// ==== CONFIG_LED_ENABLE ======================================================
 #ifndef CONFIG_LED_ENABLE
 #define CONFIG_LED_ENABLE                       DEF_ENABLE
 #endif
 
-// ==== CONFIG_DEVICE ==========================================================
+// ==== CONFIG_LED_COUNT =======================================================
 #ifndef CONFIG_LED_COUNT
 #define CONFIG_LED_COUNT                        48
 #endif
 
-// ==== CONFIG_DEVICE ==========================================================
+// ==== CONFIG_LED_R_INTENSITY =================================================
 #ifndef CONFIG_LED_R_INTENSITY
 #define CONFIG_LED_R_INTENSITY                  0x20
 #endif
 
-// ==== CONFIG_DEVICE ==========================================================
+// ==== CONFIG_LED_G_INTENSITY =================================================
 #ifndef CONFIG_LED_G_INTENSITY
 #define CONFIG_LED_G_INTENSITY                  0x20
 #endif
 
-// ==== CONFIG_DEVICE ==========================================================
+// ==== CONFIG_LED_B_INTENSITY =================================================
 #ifndef CONFIG_LED_B_INTENSITY
 #define CONFIG_LED_B_INTENSITY                  0x20
 #endif
 
 // ==== CONFIG_LED_IRQ_PERF, CONFIG_LED_IRQ_PORT, CONFIG_LED_IRQ_PIN ===========
 #ifndef CONFIG_LED_IRQ_PERF
-// Ensure CONFIG_TEST_PATTERN is set to something
 #define CONFIG_LED_IRQ_PERF                     DEF_DISABLE
 #endif
 
@@ -212,6 +247,32 @@
 
 #if CONFIG_LED_IRQ_PERF && !defined(CONFIG_LED_IRQ_PIN)
 #error "Must define CONFIG_LED_IRQ_PORT to use CONFIG_LED_IRQ_PIN."
+#endif
+
+// *****************************************************************************
+// *** Keypad Support **********************************************************
+// *****************************************************************************
+
+// ==== CONFIG_KP_ENABLE =======================================================
+#ifndef CONFIG_KP_ENABLE
+#define CONFIG_KP_ENABLE                        DEF_ENABLE
+#endif
+
+// ==== CONFIG_KP_TUNING_SAMPLE_LENGTH =========================================
+/*
+ * Extends the ADC sampling window for high impedance signals. In practice,
+ * I find this isn't necessary given the bandwidth involved.
+ */
+#ifndef CONFIG_KP_TUNING_SAMPLE_LENGTH
+#define CONFIG_KP_TUNING_SAMPLE_LENGTH          0
+#endif
+
+// ==== CONFIG_KP_HISTORY ======================================================
+/*
+ * Keep key history. Used for debugging keypad.
+ */
+#ifndef CONFIG_KP_HISTORY
+#define CONFIG_KP_HISTORY                       DEF_DISABLE
 #endif
 
 // *****************************************************************************
@@ -225,7 +286,7 @@
 
 // ==== CONFIG_DEVICE ==========================================================
 #ifndef CONFIG_BUS_ENABLE
-#define CONFIG_BUS_ENABLE                       DEF_ENABLE // disable if CONFIG_LED_IRQ_PERF
+#define CONFIG_BUS_ENABLE                       DEF_ENABLE
 #endif
 
 // *****************************************************************************
@@ -264,6 +325,11 @@
 #ifndef CONFIG_PINMUX_D
 #define CONFIG_PINMUX_D                         0x00
 #endif
+/*
+ * Override pin configuration using:
+ * 
+ * #define CONFIG_PORT_x_PINn                   0x08
+ */
 
 // *****************************************************************************
 // **** Test Patterns & Simulated Faults ***************************************

@@ -1,10 +1,24 @@
 # tinyAVR Series-0/1 Multipurpose Peripheral
 
-![Example Demonstration](./assets/top.png)
 
-*Figure: Demo board of a key pad & RGB leds. The keypad uses
+<table width="100%">
+<tr>
+<th><img src="./assets/top.png" width="40%" align="left"></td>
+<th><img src="./assets/keypad.jpg" width="40%" align="right"></td>
+</tr><tr>
+<td>
+
+Demo board of a key pad & RGB leds. The keypad uses
 [Snaptron BL10280](https://www.snaptron.com/part-number/bl10280/) back lit
-domes (the first switch is populated).*
+domes (the first switch is populated).
+
+</td>
+<td>
+
+Keypad using [current mirror approach](https://github.com/sgmne/AnalogKeypad).
+
+</td></tr>
+</table>
 
 ## Purpose
 
@@ -23,8 +37,8 @@ more modular with fewer inter-dependencies without the overhead.
 
 ### Features
 
-  - LED Support: Yes
-  - GPIO/KeyPad: Not Yet
+  - LED Support: Yes (RGB888)
+  - KeyPad: Analog (Preliminary)
   - Configurable Address: Yes
 
 ### Supported Devices
@@ -40,12 +54,12 @@ Incompatible Devices:
 ### Future Work:
 
   - Encoders & keypads feature
-    - Analog Keypad, Matrix Keypad, Simple Keypad
-  - Sleep/Standby
+    - Matrix Keypad, Simple Keypad
+  - Improve Analog Keypad support
+    - And KeyPad calibration stored in NVRAM
   - Fancy LED Encoding
-    - Color spaces (RGB565, Pallet)
+    - Color spaces (RGB888, RGBW8888, RGB565, Pallet)
     - LED effects feature?
-    - State based colors?
   - Improve EEPROM support to persist defaults (beyond device ID)
   - Transparent SPI bridge variant (direct SPI to WS2812 only)
 
@@ -71,6 +85,7 @@ Banks
 - `0: System Control Registers` (Always mapped to 0xF0 to 0xFF, but mappable to 0x00 to 0x0F.)
 - `1: Device Information (Default)`
 - `2: LED Peripheral`
+- `3: KeyPad Peripheral`
 
 ### System Control Registers
 
@@ -138,9 +153,49 @@ Addr        Register            Value
 03:n        LedData[GRB888 * count]
 ```
 
-### LED Commands
+#### LED Commands
 
 - `RefreshLed(8)`
+
+### KeyPad Peripheral Registers
+
+Keypad support is highly preliminary.
+
+
+```
+Addr        Register            Value
+--------------------------------------------------------------------------------
+00          status              Unused
+01          ctrl                Unused
+02          raw                 RAW ADC reading
+03          key                 Key Index (0 == No Key Active)
+04          state               Unused
+05          candidate           RAW ADC Baseline value used for filtering/windowing
+06          cal.threshold       Idle voltage reference value.
+07          cal.offset          ADC value subtracted prior to calculation of the key index.
+08          cal.vstep           Voltage step per key.
+09          cal.filter          Number of successive samples needed prior to accepting key.
+0A          cal.steadyState     Key is considered stable so long as it remains within this
+                                windows (RAW +/- steadyState).
+```
+
+Default calibration is:
+- Threshold: 0.9V
+- Offset: 1V
+- VStep: 260mV
+- Filter: 64
+- Steady State Window: +/- 0.0325V
+
+This is appropriate for a 4x4 keypad constructed as described in
+[sgmne's current sense keypad](https://github.com/sgmne/AnalogKeypad). This provides
+a more linear result. Recommend keypads have solid read ground plane to reduce noise.
+
+There is an CONFIG_KP_HISTORY option that changes this layout, but this feature was
+used primarily to for testing.
+
+#### KeyPad Commands
+
+- None
 
 ## Device Support
 
@@ -149,33 +204,37 @@ Addr        Register            Value
 ![ATTINY402 Schematic](./assets/attiny402.png)
 *Figure: Reference design for `ATTINY402`.*
 
-Pinout:
 
-  1. VCC
-  2. WS2812 LED Output
-  3. (currently allocated, may be possible to reuse)
-  4. SDA
-  5. SCL
-  6. UPDI (may be possible to use as input)
-  7. (currently allocated to SR reset pulse, may be possible to reuse)
-  8. GND
+| Pin | Port | Function    | Usage                                             |
+| --- | ---- | ----------- | --------------------------------------------------|
+| 1   |      | VCC         | 5V                                                |
+| 2   | PA6  | LUT0.OUT    | WS2812 Serial Waveform                            |
+| 3   | PA7  | AIN7/AINP0  | Analog Keypad                                     |
+| 4   | PA1  | TWI.SDA     | TWI (I2C) Data Signal                             |
+| 5   | PA2  | TWI.SCL     | TWI (I2C) Clock Signal                            |
+| 6   | PA0  | UPDI        | Debug interface.                                  |
+| 7   | PA3  | USART.XCK   | USART XCK routed to pin to trigger evsys.         |
+| 8   |      | GND         |                                                   |
+
+
+Currently, the build only support `VDD` at 5V. Need to adjust clock for lower
+voltages. Would need to reduce to 10MHz at 3.3V.
+
+Pin 6: UPDI can be repurposed, but recommend leaving as-is.
+Pin 7: XCK can be repurposed when USART is inactive.
+
+## Test & Validation
+
+See [test & validation](docs/test-validation.md) report.
 
 ## Implementation Notes
 
-### Memory
-
-Using a typical build configuration, the software as of Dec 2nd 2021, consumed
-the following memory resources:
-
-- SRAM memory: 177 bytes (supports 48 LEDs)
-  - Stack: 26 (32-bytes est. worst case?)
-  - Available Memory: 223 bytes
-- Program memory: 2297 bytes
-- EEPROM: 1 byte
-
 ### KeyPad Notes
 
-Feature not yet implemented.
+Initial pass is pretty preliminary. Reuses LUT1 output as analog input.
+
+TODO:
+  - Document keypad algorithm.
 
 ### WS2812 Notes
 
@@ -231,8 +290,9 @@ to trigger TCB0. The CCL Event1 is not used and can be removed.
 This implementation minimizes the PINs that are required to be allocated for
 this purpose. The following restrictions apply:
 
-  - XCK (unavailable):
-    Potentially available when LEDs are not updating.
+  - PA3 XCK: Available when LEDs are not updating.
+  - PA7 LUT1: Available
+  - PA0 UPDI: When UPDI is not in use.
 
 #### A word of warning...
 

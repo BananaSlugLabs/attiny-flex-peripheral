@@ -23,7 +23,6 @@ typedef enum {
     Bus_Error               = 6,
 } bus_state_t;
 
-
 typedef enum {
     Bus_CommandSetPage      = 1,
     Bus_CommandSetDevAddr   = 2,
@@ -56,7 +55,7 @@ typedef struct Bus_StateTag {
     uint8_t             page;
     uint8_t             activePage;
     uint8_t             offset;
-    bus_command_t       command;
+    //bus_command_t       command;
 } Bus_State;
 
 

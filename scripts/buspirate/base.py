@@ -48,26 +48,27 @@ class BBIO:
         self.port = serial.Serial(p, s, timeout=t)
     
     def BBmode(self):
-        self.port.flushInput();     
+        self.port.flushInput();
         for i in range(20):
             self.port.write(b"\x00");
             r,w,e = select.select([self.port], [], [], 0.05);
             if (r): break;
         rsp = self.response(5)
-        print(f"BBmode {repr(rsp)}")
+        #print(f"BBmode {repr(rsp)}")
         if rsp == b"BBIO1": return 1
         else: return 0
 
     def reset(self):
         self.port.write(b"\x00")
         self.timeout(0.1)
+        self.port.flushInput()
 
     def enter_I2C(self):
         self.port.write(b"\x02")
         self.timeout(0.2)
         if self.response(4) == b"I2C1": return 1
         else: return 0
-        
+
     def resetBP(self):
         self.reset()
         self.port.write(b"\x0F")
