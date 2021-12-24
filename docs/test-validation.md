@@ -235,7 +235,7 @@ Limitations & Improvements:
   4. Select MAX mode on the multimeter, wait 10 seconds.
   5. **Record result for I<sub>idle</sub> (1A).**
   6. Connect buspirate; (Record offset, if any?)
-  7. Run script to generate I2C traffic.
+  7. Run script to generate I2C traffic. (See scripts/traffic.py for example.)
     - I adapted the ledtest.py script to send 72 bytes to the LED page indefinitely.
   8. Reset statistics on multimeter, select MAX and wait 10 seconds
   9. **Record the result for I<sub>i2c</sub> (1B).**

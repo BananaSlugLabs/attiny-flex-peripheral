@@ -28,18 +28,14 @@
 #define CONFIG_PINMUX_C                         0x00
 #define CONFIG_PINMUX_D                         0x00
 
-
-//#define CONFIG_KP_ENABLE                        DEF_DISABLE
 #define CONFIG_KP_ADC_PIN                       7
 
-//DEF_SLEEP_IDLE
-//DEF_SLEEP_STANDBY
-//DEF_SLEEP_POWERDOWN
-
-#define TEST_GROUP                              4
-#define TEST_SEQ                                1
-
-#define CONFIG_SLEEP_TIMEOUT                    4000
+// *****************************************************************************
+// ********* Used for testing & validation (see docs/test-validation.md).
+//#define TEST_GROUP                              4
+//#define TEST_SEQ                                1
+//#define CONFIG_SLEEP_TIMEOUT                    4000
+#if defined(TEST_GROUP) && defined(TEST_SEQ)
 #if TEST_GROUP == 1
 #define CONFIG_SLEEP                            DEF_DISABLE
 #define CONFIG_STANDBY_SLOWCLOCK                DEF_DISABLE
@@ -61,7 +57,7 @@
 #else
 #error "Invalid test group."
 #endif
-
+#endif
 #if TEST_SEQ == 1
 // Uses the same defaults for the first 3 tests.
 #elif TEST_SEQ == 2
