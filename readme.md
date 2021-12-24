@@ -3,8 +3,8 @@
 
 <table width="100%">
 <tr>
-<th><img src="./assets/top.png" width="40%" align="left"></td>
-<th><img src="./assets/keypad.jpg" width="40%" align="right"></td>
+<th><img src="./assets/top.png" width="95%" align="center"></td>
+<th><img src="./assets/keypad.jpg" width="95%" align="center"></td>
 </tr><tr>
 <td>
 
@@ -192,6 +192,9 @@ a more linear result. Recommend keypads have solid read ground plane to reduce n
 
 There is an CONFIG_KP_HISTORY option that changes this layout, but this feature was
 used primarily to for testing.
+
+See [this spreadsheet](assets/keypad_worksheet.ods) for a worksheet to help with
+calibration.
 
 #### KeyPad Commands
 
