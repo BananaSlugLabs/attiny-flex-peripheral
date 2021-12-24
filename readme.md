@@ -64,6 +64,12 @@ Incompatible Devices:
   - Improve EEPROM support to persist defaults (beyond device ID)
   - Transparent SPI bridge variant (direct SPI to WS2812 only)
 
+## Environment
+
+  - MPLab X IDE 5.50
+  - Compiler: GCC 7.4.0 (Arduino toolchain)
+    - GCC 5.4, builds, but not tested.
+
 ## Test Script (using buspirate)
 
 A test script is provided in `scripts/ledtest.py`. It uses BusPirate with a
