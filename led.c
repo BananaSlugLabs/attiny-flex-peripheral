@@ -3,10 +3,10 @@
 #include "sys.h"
 #include "led_internal.h"
 #include <avr/cpufunc.h>
-
+#if CONFIG_LED_ENABLE
 static void led_init();
 static void led_finit();
-static bus_status_t led_update_cmd(bus_command_t command);
+static bus_status_t led_update_cmd();
 
 Bus_DefineCommand(led_update_cmd, 0xFF, 0x08);
 
@@ -102,6 +102,7 @@ ISR(USART0_DRE_vect) {
                 USART0.CTRLA    = USART_TXCIE_bm; // switch to TXC IRQ
                 Led.state       = LED_STATE_STREAM_PIXEL_DONE;
             }
+            sys_signal(Sys_SignalWakeLock);
             break;
             
         case LED_STATE_RESET:
@@ -128,100 +129,75 @@ ISR(USART0_DRE_vect) {
 static void led_init() {
     // *************************************************************************
     // **** Event System Configuration *****************************************
-	EVSYS.ASYNCCH0 = 0x0D;
-	EVSYS.ASYNCCH1 = 0x02;
-	EVSYS.ASYNCUSER0 = 0x03;
-	EVSYS.ASYNCUSER1 = 0x00;
-	EVSYS.ASYNCUSER2 = 0x01;
-	EVSYS.ASYNCUSER3 = 0x01;
-	EVSYS.ASYNCUSER4 = 0x03;
-	EVSYS.ASYNCUSER5 = 0x03;
-	EVSYS.ASYNCUSER6 = 0x00;
-	EVSYS.ASYNCUSER7 = 0x00;
-	EVSYS.ASYNCUSER8 = 0x00;
-	EVSYS.ASYNCUSER9 = 0x00;
-	EVSYS.ASYNCUSER10 = 0x00;
-	EVSYS.SYNCCH0 = 0x01;
-	EVSYS.SYNCCH1 = 0x00;
-	EVSYS.SYNCUSER0 = 0x00;
+	EVSYS.ASYNCCH0      = 0x0D;
+	EVSYS.ASYNCCH1      = 0x02;
+	EVSYS.ASYNCUSER0    = 0x03;
+	EVSYS.ASYNCUSER1    = 0x00;
+	EVSYS.ASYNCUSER2    = 0x01;
+	EVSYS.ASYNCUSER3    = 0x01;
+	EVSYS.ASYNCUSER4    = 0x03;
+	EVSYS.ASYNCUSER5    = 0x03;
+	EVSYS.ASYNCUSER6    = 0x00;
+	EVSYS.ASYNCUSER7    = 0x00;
+	EVSYS.ASYNCUSER8    = 0x00;
+	EVSYS.ASYNCUSER9    = 0x00;
+	EVSYS.ASYNCUSER10   = 0x00;
+	EVSYS.SYNCCH0       = 0x01;
+	EVSYS.SYNCCH1       = 0x00;
+	EVSYS.SYNCUSER0     = 0x00;
     
     // *************************************************************************
     // **** CCL Configuration **************************************************
-    
-	// Enable Protected register, peripheral must be disabled (ENABLE=0, in CCL.LUT0CTRLA).
 
-    //SEQSEL RS; 
-	CCL.SEQCTRL0 = 0x04;
-
-    //Truth 0
-	CCL.TRUTH0 = 0x08;
-
-    //INSEL2 EVENT0; 
-	CCL.LUT0CTRLC = 0x03;
-
-    //INSEL1 TCB0; INSEL0 USART0; 
-	CCL.LUT0CTRLB = 0x7A;
-
-    //Truth 1
-	CCL.TRUTH1 = 0x70;
-
-    //INSEL2 EVENT0; 
-	CCL.LUT1CTRLC = 0x03;
-
-    //INSEL1 USART0; INSEL0 USART0; 
-	CCL.LUT1CTRLB = 0xAA;
-	
-    //EDGEDET DIS; CLKSRC disabled; FILTSEL DISABLE; OUTEN enabled; ENABLE enabled; 
-	CCL.LUT0CTRLA = 0x09;
-
-    //EDGEDET DIS; CLKSRC disabled; FILTSEL DISABLE; OUTEN enabled; ENABLE enabled; 
-	CCL.LUT1CTRLA = 0x09;
-
-    //RUNSTDBY disabled; ENABLE disable; 
-	CCL.CTRLA = 0x09;
-    
+	CCL.SEQCTRL0        = CCL_SEQSEL_RS_gc;
+	CCL.TRUTH1          = 0x70;
+	CCL.TRUTH0          = 0x08;
+	CCL.LUT0CTRLC       = CCL_INSEL2_EVENT0_gc;
+	CCL.LUT0CTRLB       = CCL_INSEL1_TCB0_gc | CCL_INSEL0_USART0_gc;
+	CCL.LUT1CTRLC       = CCL_INSEL2_EVENT0_gc;
+	CCL.LUT1CTRLB       = CCL_INSEL0_USART0_gc | CCL_INSEL1_USART0_gc;
+	CCL.LUT0CTRLA       = CCL_OUTEN_bm | CCL_ENABLE_bm;
+	CCL.LUT1CTRLA       = CCL_ENABLE_bm;
+	CCL.CTRLA           = CCL_RUNSTDBY_bm | CCL_ENABLE_bm;
     
     // *************************************************************************
     // **** TCB0 Configuration *************************************************
     
-    TCB0.CCMP = 0x03;
-    TCB0.CNT = 0x00;
-    TCB0.CTRLB = 0x16;
-    TCB0.DBGCTRL = 0x00;
-    //FILTER disabled; EDGE enabled; CAPTEI enabled; 
-    TCB0.EVCTRL = 0x11;
-    TCB0.INTCTRL = 0x00;
-    TCB0.INTFLAGS = 0x00;
-    TCB0.TEMP = 0x00;
-
-    //RUNSTDBY disabled; SYNCUPD disabled; CLKSEL CLKDIV1; ENABLE disabled; 
-    TCB0.CTRLA = 0x00;
+    TCB0.CCMP           = 0x03;
+    TCB0.CNT            = 0x00;
+    TCB0.CTRLB          = 0x16;
+    TCB0.DBGCTRL        = 0x00;
+    TCB0.EVCTRL         = 0x11;
+    TCB0.INTCTRL        = 0x00;
+    TCB0.INTFLAGS       = 0x00;
+    TCB0.TEMP           = 0x00;
+    TCB0.CTRLA          = 0x00;
 
     // *************************************************************************
     // **** UART Configuration *************************************************
     
     //set baud rate register
-    USART0.CTRLB = 0;
-    USART0.BAUD = (uint16_t)LED_BAUD(500000);
-    USART0.CTRLA = 0x00;
-    USART0.CTRLB = USART_TXEN_bm;
-    USART0.CTRLC = USART_CMODE_MSPI_gc;
-    USART0.DBGCTRL = 0x00;
-    USART0.EVCTRL = 0x00;
-    USART0.RXPLCTRL = 0x00;
-    USART0.TXPLCTRL = 0x00;
+    USART0.CTRLB        = 0;
+    USART0.BAUD         = (uint16_t)LED_BAUD(500000);
+    USART0.CTRLA        = 0x00;
+    USART0.CTRLB        = USART_TXEN_bm;
+    USART0.CTRLC        = USART_CMODE_MSPI_gc;
+    USART0.DBGCTRL      = 0x00;
+    USART0.EVCTRL       = 0x00;
+    USART0.RXPLCTRL     = 0x00;
+    USART0.TXPLCTRL     = 0x00;
     
     // *************************************************************************
     // **** Misc Initialization ************************************************
     
-    Led.state = LED_STATE_IDLE;
-    Led.index = 0;
-    Led.total = 0;
+    Led.state           = LED_STATE_IDLE;
+    Led.index           = 0;
+    Led.total           = 0;
     
     led_setAll(&led_color_black);
     
     led_registerfile.data.count = CONFIG_LED_COUNT;
-    led_registerfile.ctrla      = Led_CtrlA_Update;
+    led_registerfile.ctrla      = 0;
     led_registerfile.ctrlb      = 0;
     
 #if CONFIG_LED_IRQ_PERF
@@ -261,6 +237,8 @@ void led_update() {
         return;
     }
     
+    sys_signal(Sys_SignalWakeLock);
+    
     if ( led_registerfile.data.count > CONFIG_LED_COUNT) {
         led_registerfile.data.count = CONFIG_LED_COUNT;
     }
@@ -292,7 +270,14 @@ void led_update() {
     }
 }
 
-static bus_status_t led_update_cmd(bus_command_t command) {
+static bus_status_t led_update_cmd() {
     led_update();
     return Bus_StatusSuccess; // could improve by only setting after LED chain updated.
 }
+#else
+// STUB LED APIs when disabled.
+void led_setAll(const Led_Color* color){}
+void led_set(uint8_t index, const Led_Color* color) {}
+bool led_isBusy() {return false;}
+void led_update() {}
+#endif

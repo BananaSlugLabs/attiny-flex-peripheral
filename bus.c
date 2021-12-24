@@ -35,6 +35,7 @@
 
 #if CONFIG_BUS_ENABLE
 Bus_State               bus_state;
+Bus_CommandContext      bus_commandContext;
 
 extern const Bus_MemMap _bus_memmap_start;
 extern const uint8_t    _bus_memmap_count;
@@ -55,6 +56,7 @@ Bus_IOControl           bus_iomem_control;
 
 const Bus_MemMap        bus_iomap_control       = { .data = (uint8_t*)&bus_iomem_control, .length = sizeof(bus_iomem_control) };
 const Bus_MemMap        bus_iomap_deviceInfo    = { .data = (uint8_t*)&bus_iomem_devinfo, .length = sizeof(bus_iomem_devinfo) };
+uint8_t                 twi_break               = 0;
 
 extern const Bus_Command _bus_command_map_start[1];
 extern const Bus_Command _bus_command_map_end[1];
@@ -89,40 +91,40 @@ ISR(TWI0_TWIS_vect) {
                 //DEBUG_BREAKPOINT();
             }
         } else {
-            {
-                uint8_t command;
-                
-                if (bus_state.state != Bus_ReadWrite) { // No writes were performed
-                    command = 0;
-                } else if (bus_state.activePage == CONFIG_PAGE) {
-                    command = bus_iomem_control.command;
-                    bus_iomem_control.command = 0;
-                } else {
-                    command = bus_iomem_control.txCommand;
-                }
-                
-                if (command > 0) {
-                    if (bus_state.command != 0) {
-                        // Only one command active at a time...
-                        bus_iomem_control.status |= Bus_StatusBusError;
-                        bus_state.state = Bus_Idle;
-                    } else {
-                        // Reset busy flag after next successful command...
-                        bus_iomem_control.status = (bus_iomem_control.status & (~Bus_StatusCode_bm | Bus_StatusBusError)) | Bus_StatusInProgress;
-                        bus_state.command = command;
-                        bus_state.state = Bus_IoFinish;
-                    }
-                } else {
-                    bus_state.state = Bus_Idle;
-                }
-                // need to defer this since we can't meet timing requirements. May have to replicate in other cases.
-                TWI0.SCTRLB = TWI_CMD_DONE;
+            uint8_t command;
+            if (bus_state.state != Bus_ReadWrite) { // No writes were performed
+                command = 0;
+            } else if (bus_state.activePage == CONFIG_PAGE) {
+                command = bus_iomem_control.command;
+                bus_iomem_control.command = 0;
+            } else {
+                command = bus_iomem_control.txCommand;
             }
+
+            if (command > 0) {
+                if (bus_commandContext.command != 0) {
+                    // Only one command active at a time...
+                    bus_iomem_control.status |= Bus_StatusBusError;
+                    bus_state.state = Bus_Idle;
+                } else {
+                    // Reset busy flag after next successful command...
+                    bus_iomem_control.status = (bus_iomem_control.status & (~Bus_StatusCode_bm | Bus_StatusBusError)) | Bus_StatusInProgress;
+                    bus_commandContext.command = command;
+                    bus_commandContext.lastAddress = (void*)Map_GetActive()->data;
+                    bus_state.state = Bus_IoFinish;
+                }
+            } else {
+                bus_state.state = Bus_Idle;
+            }
+            sys_signal(Sys_SignalWakeLock|Sys_SignalWorkerPending);
+            // need to defer this since we can't meet timing requirements. May have to replicate in other cases.
+            TWI0.SCTRLB = TWI_CMD_DONE;
         }
         return;
     }
     
     if (s & TWI_DIF_bm) {
+        sys_signal(Sys_SignalWakeLock);
         if (s & TWI_DIR_bm) {
             // ************ Controller Read ****************************************
             TWI0.SDATA = Map_GetActive()->data[bus_state.offset]; 
@@ -184,7 +186,7 @@ ISR(TWI0_TWIS_vect) {
                 case Bus_Error:
                 default:
                 {
-                    DEBUG_BREAKPOINT();
+                    FORCE_READ(TWI0.SDATA); // otherwise the compile optimizes the read
                     TWI0.SCTRLB = TWI_CMD_NACK;
                     break;
                 }
@@ -196,11 +198,15 @@ ISR(TWI0_TWIS_vect) {
 static void bus_init();
 static void bus_finit();
 static void bus_loop();
+#if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
+static void bus_enterStandby();
+#endif
 
 SysInit_Subscribe(bus_init,         Signal_Normal);
 SysFinit_Subscribe(bus_finit,       Signal_Normal);
 SysAbort_Subscribe(bus_finit,       Signal_Normal);
 SysLoop_Subscribe(bus_loop,         Signal_Normal);
+SysStandbyEnter_Subscribe(bus_enterStandby, Signal_Normal);
 
 static void bus_init() {
     TWI0.SCTRLA = 0;
@@ -226,7 +232,7 @@ static void bus_init() {
     TWI0.SADDRMASK = 0x00;
 
     //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
-    TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm;
+    TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm | TWI_SMEN_bm;
 
     //ACKACT ACK; SCMD NOACT; 
     TWI0.SCTRLB = 0x00;
@@ -242,17 +248,21 @@ static void bus_finit() {
     TWI0.SCTRLA &= ~TWI_ENABLE_bm;
 }
 
+#if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
+static void bus_enterStandby() {
+    if (TWI0.SSTATUS & (TWI_DIF_bm|TWI_APIF_bm)) {
+        DEBUG_BREAKPOINT();
+    }
+}
+#endif
+
 void bus_commandUpdateStatusIRQ (uint8_t status) {
     bus_iomem_control.status = (bus_iomem_control.status & ~Bus_StatusCode_bm) | status;
     
     if (status != Bus_StatusInProgress) {
-        DEBUG_BREAKPOINT();
-        bus_state.command = 0;
+        bus_commandContext.lastCommand = bus_commandContext.command;
+        bus_commandContext.command = 0;
     }
-}
-
-bus_command_t bus_getActiveCommand () {
-    return bus_state.command;
 }
 
 void bus_commandUpdateStatus (uint8_t status) {
@@ -264,14 +274,13 @@ void bus_commandUpdateStatus (uint8_t status) {
 static void bus_loop() {
     if ( bus_state.state == Bus_IoFinish ) {
         bus_status_t status         = Bus_StatusInProgress;
-        bus_command_t command       = bus_state.command;
+        bus_command_t command       = bus_commandContext.command;
         bus_state.state             = Bus_Idle;
         
         bus_commandUpdateStatus(Bus_StatusInProgress);
         
         if (command < 8) {
             uint8_t param;
-            DEBUG_BREAKPOINT();
             switch (command) {
             case Bus_CommandSetPage:
                 param = bus_iomem_control.params[0];
@@ -310,7 +319,7 @@ static void bus_loop() {
                     cmd <= _bus_command_map_end;
                     cmd ++) {
                 if ((cmd->mask & command) == cmd->match) {
-                    status = cmd->handler(command);
+                    status = cmd->handler();
                     found = true;
                 }
             }

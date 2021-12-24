@@ -31,7 +31,7 @@ typedef enum {
 } bus_status_t;
 
 typedef uint8_t bus_command_t;
-typedef bus_status_t (*bus_handler_t) (bus_command_t command);
+typedef bus_status_t (*bus_handler_t) ();
 
 typedef struct Bus_MemMapTag {
     uint8_t*            data;
@@ -43,6 +43,12 @@ typedef struct Bus_CommandTag {
     bus_command_t       mask;
     bus_command_t       match;
 } Bus_Command;
+
+typedef struct Bus_CommandContextTag {
+    bus_command_t       command;
+    bus_command_t       lastCommand;
+    void*               lastAddress;
+} Bus_CommandContext;
 
 #define BUS_PRIORITY_000 000
 #define BUS_PRIORITY_001 001
@@ -71,20 +77,21 @@ typedef struct Bus_CommandTag {
     const uint8_t _iomap_ ## regs _Bus_Attrs("id", pri) _MPLABX_WORKAROUD;
 
 #define Bus_DefineCommand(callback, commandMask, commandMatch)                              \
-    const Bus_Command _bus_command_ ## callback _Bus_Attrs("commands", 0) = {                        \
+    const Bus_Command _bus_command_ ## callback _Bus_Attrs("commands", 0) = {               \
             .handler        = callback,                                                     \
             .mask           = commandMask,                                                  \
             .match          = commandMatch,                                                 \
     };
 
+#define bus_getActiveCommand() bus_commandContext.command
+
+extern Bus_CommandContext bus_commandContext;
 /**
  * For asynchronous completion of commands.
  * 
  * @param status Return Bus_StatusInProgress if command is async.
  */
 void bus_commandUpdateStatus (uint8_t status);
-bus_command_t bus_getActiveCommand ();
-
 void bus_commandUpdateStatusIRQ (uint8_t status);
 
 #ifdef	__cplusplus

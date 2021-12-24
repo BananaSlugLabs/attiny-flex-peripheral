@@ -14,6 +14,7 @@
       <itemPath>bus_internal.h</itemPath>
       <itemPath>signal.h</itemPath>
       <itemPath>configs/attiny402.h</itemPath>
+      <itemPath>keypad_internal.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -26,11 +27,11 @@
       <itemPath>main.c</itemPath>
       <itemPath>led.c</itemPath>
       <itemPath>sys.c</itemPath>
-      <itemPath>time.c</itemPath>
       <itemPath>boot.s</itemPath>
       <itemPath>fuses.c</itemPath>
       <itemPath>bus.c</itemPath>
       <itemPath>util.c</itemPath>
+      <itemPath>keypad.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
