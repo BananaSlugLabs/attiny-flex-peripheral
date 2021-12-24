@@ -31,7 +31,7 @@
 #define CONFIG_KP_ADC_PIN                       7
 
 // *****************************************************************************
-// ********* Used for testing & validation (see docs/test-validation.md).
+// ********* Used for testing & validation (see docs/test-validation.md)
 //#define TEST_GROUP                              4
 //#define TEST_SEQ                                1
 //#define CONFIG_SLEEP_TIMEOUT                    4000
@@ -57,7 +57,6 @@
 #else
 #error "Invalid test group."
 #endif
-#endif
 #if TEST_SEQ == 1
 // Uses the same defaults for the first 3 tests.
 #elif TEST_SEQ == 2
@@ -68,6 +67,7 @@
 #define CONFIG_BUS_ENABLE                       DEF_DISABLE
 #else
 #error "Bad test case selected"
+#endif
 #endif
 
 

@@ -169,8 +169,10 @@ Addr        Register            Value
 01          ctrl                Unused
 02          raw                 RAW ADC reading
 03          key                 Key Index (0 == No Key Active)
-04          state               Unused
+04          state               KeyPad state machine.
+                                (Dianostic only.)
 05          candidate           RAW ADC Baseline value used for filtering/windowing
+                                (Dianostic only.)
 06          cal.threshold       Idle voltage reference value.
 07          cal.offset          ADC value subtracted prior to calculation of the key index.
 08          cal.vstep           Voltage step per key.
