@@ -17,10 +17,14 @@
 
 // ==== CONFIG_DEVICE ==========================================================
 #define DEF_DEVICE_ATTINY402                    402
+#define DEF_DEVICE_ATTINY804                    804
 
-#ifdef __ATtiny402__
+#if defined(__ATtiny402__)
 #define CONFIG_DEVICE                           DEF_DEVICE_ATTINY402
 #define CONFIG_DEVICE_INCLUDE                   "configs/attiny402.h"
+#elif defined(__ATtiny804__)
+#define CONFIG_DEVICE                           DEF_DEVICE_ATTINY804
+#define CONFIG_DEVICE_INCLUDE                   "configs/attiny804.h"
 #else
 #error "Unsupported device."
 #endif
@@ -95,6 +99,17 @@
 #define DEF_SLEEP_PRETEND                       4
 
 // *****************************************************************************
+// **** Hardware Peripherals ***************************************************
+// *****************************************************************************
+
+// ==== CONFIG_HW_EVSYS_USER_ASYNCn & CONFIG_HW_EVSYS_USER_SYNCn ===============
+#define DEF_HW_EVSYS_CHANNEL_OFF                0
+#define DEF_HW_EVSYS_CHANNEL_SYNC0              1
+#define DEF_HW_EVSYS_CHANNEL_SYNC1              2
+#define DEF_HW_EVSYS_CHANNEL_ASYNC0             3
+#define DEF_HW_EVSYS_CHANNEL_ASYNC1             4
+
+// *****************************************************************************
 // **** KeyPad Driver **********************************************************
 // *****************************************************************************
 
@@ -130,11 +145,7 @@
 // ==== CONFIG_DEVICE ==========================================================
 // ... Check device is supported.
 #ifndef CONFIG_DEVICE
-#error "Unknown device."
-#else
-#if CONFIG_DEVICE != DEF_DEVICE_ATTINY402
-#error "Device is not supported."
-#endif
+#error "Unknown device. This shouldn't happen."
 #endif
 
 // ==== CONFIG_CLOCK ===========================================================
@@ -365,12 +376,19 @@
 // *****************************************************************************
 
 // ==== CONFIG_FW_MFG, CONFIG_FW_IDENT, CONFIG_FW_VERSION ======================
+
 #ifndef CONFIG_FW_MFG
 #define CONFIG_FW_MFG                           0xBAAA
 #endif
+
 #ifndef CONFIG_FW_IDENT
-#define CONFIG_FW_IDENT                         0x2812
+#if CONFIG_DEVICE == DEF_DEVICE_ATTINY402
+#define CONFIG_FW_IDENT                         0xD402
+#elif CONFIG_DEVICE == DEF_DEVICE_ATTINY804
+#define CONFIG_FW_IDENT                         0xD804
 #endif
+#endif
+
 #ifndef CONFIG_FW_VERSION
 #define CONFIG_FW_VERSION                       0x01
 #endif

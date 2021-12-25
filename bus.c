@@ -198,25 +198,18 @@ ISR(TWI0_TWIS_vect) {
 static void bus_init();
 static void bus_finit();
 static void bus_loop();
-#if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
-static void bus_enterStandby();
-#endif
 
 SysInit_Subscribe(bus_init,         Signal_Normal);
 SysFinit_Subscribe(bus_finit,       Signal_Normal);
 SysAbort_Subscribe(bus_finit,       Signal_Normal);
 SysLoop_Subscribe(bus_loop,         Signal_Normal);
-SysStandbyEnter_Subscribe(bus_enterStandby, Signal_Normal);
 
 static void bus_init() {
     TWI0.SCTRLA = 0;
     
     bus_state.page = DEVINFO_PAGE;
     
-    //SDASETUP 4CYC; SDAHOLD OFF; FMPEN disabled; 
-    TWI0.CTRLA = 0x00;
-
-    //Debug Run
+    TWI0.CTRLA = TWI_SDAHOLD_50NS_gc;
     TWI0.DBGCTRL = 0x00;
 
     //Peripheral Address
@@ -228,33 +221,16 @@ static void bus_init() {
         TWI0.SADDR = addr;
     }
 
-    //ADDRMASK 0; ADDREN disabled; 
     TWI0.SADDRMASK = 0x00;
-
-    //DIEN enabled; APIEN enabled; PIEN disabled; PMEN disabled; SMEN disabled; ENABLE enabled; 
     TWI0.SCTRLA = TWI_APIEN_bm | TWI_DIEN_bm | TWI_PIEN_bm | TWI_ENABLE_bm | TWI_SMEN_bm;
-
-    //ACKACT ACK; SCMD NOACT; 
     TWI0.SCTRLB = 0x00;
-
-    //Peripheral Data
     TWI0.SDATA = 0x00;
-
-    //DIF disabled; APIF disabled; COLL disabled; BUSERR disabled; 
     TWI0.SSTATUS = 0x00;
 }
 
 static void bus_finit() {
     TWI0.SCTRLA &= ~TWI_ENABLE_bm;
 }
-
-#if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
-static void bus_enterStandby() {
-    if (TWI0.SSTATUS & (TWI_DIF_bm|TWI_APIF_bm)) {
-        DEBUG_BREAKPOINT();
-    }
-}
-#endif
 
 void bus_commandUpdateStatusIRQ (uint8_t status) {
     bus_iomem_control.status = (bus_iomem_control.status & ~Bus_StatusCode_bm) | status;

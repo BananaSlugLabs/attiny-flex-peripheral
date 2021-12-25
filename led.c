@@ -126,25 +126,79 @@ ISR(USART0_DRE_vect) {
     }
 }
 
+#define EVSYS_ASYNC_GENERATOR(n)    EVSYS.ASYNCCH # n
+#define EVSYS_SYNC_GENERATOR(n)     EVSYS.SYNCCH  # n
+
 static void led_init() {
     // *************************************************************************
     // **** Event System Configuration *****************************************
-	EVSYS.ASYNCCH0      = 0x0D;
-	EVSYS.ASYNCCH1      = 0x02;
-	EVSYS.ASYNCUSER0    = 0x03;
-	EVSYS.ASYNCUSER1    = 0x00;
-	EVSYS.ASYNCUSER2    = 0x01;
-	EVSYS.ASYNCUSER3    = 0x01;
-	EVSYS.ASYNCUSER4    = 0x03;
-	EVSYS.ASYNCUSER5    = 0x03;
-	EVSYS.ASYNCUSER6    = 0x00;
-	EVSYS.ASYNCUSER7    = 0x00;
-	EVSYS.ASYNCUSER8    = 0x00;
-	EVSYS.ASYNCUSER9    = 0x00;
-	EVSYS.ASYNCUSER10   = 0x00;
-	EVSYS.SYNCCH0       = 0x01;
-	EVSYS.SYNCCH1       = 0x00;
-	EVSYS.SYNCUSER0     = 0x00;
+    
+    // ---- Generators: Async
+#if defined(CONFIG_HW_EVSYS_GENERATOR_ASYNC0)
+	EVSYS.ASYNCCH0      = CONFIG_HW_EVSYS_GENERATOR_ASYNC0;
+#endif
+#if defined(CONFIG_HW_EVSYS_GENERATOR_ASYNC1)
+	EVSYS.ASYNCCH1      = CONFIG_HW_EVSYS_GENERATOR_ASYNC1;
+#endif
+#if defined(CONFIG_HW_EVSYS_GENERATOR_ASYNC2)
+	EVSYS.ASYNCCH2      = CONFIG_HW_EVSYS_GENERATOR_ASYNC2;
+#endif
+#if defined(CONFIG_HW_EVSYS_GENERATOR_ASYNC3)
+	EVSYS.ASYNCCH3      = CONFIG_HW_EVSYS_GENERATOR_ASYNC3;
+#endif
+#if defined(CONFIG_HW_EVSYS_GENERATOR_ASYNC4)
+	EVSYS.ASYNCCH4      = CONFIG_HW_EVSYS_GENERATOR_ASYNC4;
+#endif
+    // ******** Sync
+#if defined(CONFIG_HW_EVSYS_GENERATOR_SYNC0)
+	EVSYS.SYNCCH0       = CONFIG_HW_EVSYS_GENERATOR_SYNC0;
+#endif
+#if defined(CONFIG_HW_EVSYS_GENERATOR_SYNC1)
+	EVSYS.SYNCCH1       = CONFIG_HW_EVSYS_GENERATOR_SYNC1;
+#endif
+
+    // ---- Users: Async & Sync
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC0)
+	EVSYS.ASYNCUSER0    = CONFIG_HW_EVSYS_USER_ASYNC0;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC1)
+	EVSYS.ASYNCUSER1    = CONFIG_HW_EVSYS_USER_ASYNC1;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC2)
+	EVSYS.ASYNCUSER2    = CONFIG_HW_EVSYS_USER_ASYNC2;
+#endif    
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC3)
+	EVSYS.ASYNCUSER3    = CONFIG_HW_EVSYS_USER_ASYNC3;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC4)
+	EVSYS.ASYNCUSER4    = CONFIG_HW_EVSYS_USER_ASYNC4;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC5)
+	EVSYS.ASYNCUSER5    = CONFIG_HW_EVSYS_USER_ASYNC5;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC6)
+	EVSYS.ASYNCUSER6    = CONFIG_HW_EVSYS_USER_ASYNC6;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC7)
+	EVSYS.ASYNCUSER7    = CONFIG_HW_EVSYS_USER_ASYNC7;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC8)
+	EVSYS.ASYNCUSER8    = CONFIG_HW_EVSYS_USER_ASYNC8;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC9)
+	EVSYS.ASYNCUSER9    = CONFIG_HW_EVSYS_USER_ASYNC9;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_ASYNC10)
+	EVSYS.ASYNCUSER10   = CONFIG_HW_EVSYS_USER_ASYNC10;
+#endif
+    
+    // ---- Users: Sync Only
+#if defined(CONFIG_HW_EVSYS_USER_SYNC0)
+	EVSYS.SYNCUSER0     = CONFIG_HW_EVSYS_USER_SYNC0;
+#endif
+#if defined(CONFIG_HW_EVSYS_USER_SYNC1)
+	EVSYS.SYNCUSER1     = CONFIG_HW_EVSYS_USER_SYNC1;
+#endif
     
     // *************************************************************************
     // **** CCL Configuration **************************************************
@@ -165,9 +219,10 @@ static void led_init() {
     
     TCB0.CCMP           = 0x03;
     TCB0.CNT            = 0x00;
-    TCB0.CTRLB          = 0x16;
+    TCB0.CTRLB          = TCB_CNTMODE_SINGLE_gc;
+    
     TCB0.DBGCTRL        = 0x00;
-    TCB0.EVCTRL         = 0x11;
+    TCB0.EVCTRL         = TCB_CAPTEI_bm | TCB_EDGE_bm;
     TCB0.INTCTRL        = 0x00;
     TCB0.INTFLAGS       = 0x00;
     TCB0.TEMP           = 0x00;

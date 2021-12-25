@@ -114,8 +114,12 @@ void sys_restart() {
 }
 
 int main () {
-    DEBUG_BREAKPOINT();
+    uint8_t resetCause = RSTCTRL.RSTFR;
+    if (resetCause & (RSTCTRL_BORF_bm|RSTCTRL_WDRF_bm|RSTCTRL_SWRF_bm)) {
+        DEBUG_BREAKPOINT();
+    }
     RSTCTRL.RSTFR = 0xFF;
+    
     signal_dispatch(sys_init_io);
     signal_dispatch(sys_init_early);
     signal_dispatch(sys_init);
@@ -175,10 +179,13 @@ int main () {
             time_resetStabdbyTimer();
         }
 #endif
-        
+#if !CONFIG_SLEEP 
+        signal_dispatch(sys_loop);
+#else
         if (sigs & Sys_SignalWorkerPending) {
             signal_dispatch(sys_loop);
         }
+#endif
     }
     signal_dispatch(sys_finit);
 }

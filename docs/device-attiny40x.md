@@ -44,6 +44,14 @@ Another parameter that may be worth changing:
 #define CONFIG_SLEEP_TIMEOUT                    4000
 ```
 
+When entering standby we reduce the clock to ~800KHz. It is possible
+to disable this:
+```
+#define CONFIG_STANDBY_SLOWCLOCK DEF_DISABLE
+```
+
+If not using STANDBY, recommend using IDLE.
+
 ### KeyPad Notes
 
 Initial pass is pretty preliminary. Reuses LUT1 output as analog input.
