@@ -4,6 +4,9 @@
 
 
 #if CONFIG_TEST_PATTERN
+#if CONFIG_SLEEP
+#error "The test application does not support sleep mode."
+#endif
 static void app_loop ();
 SysLoop_Subscribe(app_loop, Signal_Low);
 

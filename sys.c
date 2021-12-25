@@ -180,6 +180,7 @@ int main () {
         }
 #endif
 #if !CONFIG_SLEEP
+        // This is needed until I fix the test application mode.
         signal_dispatch(sys_loop);
 #else
         if (sigs & Sys_SignalWorkerPending) {

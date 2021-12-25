@@ -84,7 +84,7 @@
 #endif
 #endif
 
-//#define CONFIG_TEST_PATTERN                     DEF_TEST_PATTERN_TYPE_UNIFORM_FADE
+#define CONFIG_TEST_PATTERN                     DEF_TEST_PATTERN_TYPE_UNIFORM_FADE
 
 #endif	/* ATTINY804_H */
 
