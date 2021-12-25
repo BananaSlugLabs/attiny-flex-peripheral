@@ -20,12 +20,12 @@
  * | 6   | PB3  |             | Unused.                                               |
  * | 7   | PB2  |             | Unused.                                               |
  * | 8   | PB1  | TWI.SDA     | TWI (I2C) Data Signal                                 |
- * | 9   | PB2  | TWI.SCL     | TWI (I2C) Clock Signal                                |
+ * | 9   | PB0  | TWI.SCL     | TWI (I2C) Clock Signal                                |
  * | 10  | PA0  | UPDI        | Debug interface.                                      |
  * | 11  | PA1  | USART.TxD   | Raw LED bitstream.                                    |
  * | 12  | PA2  | USART.RxD   | Unused.                                               |
  * | 13  | PA3  | USART.XCK   | Raw LED bitstream clock.                              |
- * | 14  |      | GND         |                                                        |
+ * | 14  |      | GND         |                                                       |
  */
 
 #define CONFIG_HAS_PORT_A                       DEF_ENABLE

@@ -4,17 +4,25 @@
 
 *Figure: Reference design for `ATTINY402`.*
 
+# Device Overview
 
-| Pin | Port | Function    | Usage                                             |
-| --- | ---- | ----------- | --------------------------------------------------|
-| 1   |      | VCC         | 5V                                                |
-| 2   | PA6  | LUT0.OUT    | WS2812 Serial Waveform                            |
-| 3   | PA7  | AIN7/AINP0  | Analog Keypad                                     |
-| 4   | PA1  | TWI.SDA     | TWI (I2C) Data Signal                             |
-| 5   | PA2  | TWI.SCL     | TWI (I2C) Clock Signal                            |
-| 6   | PA0  | UPDI        | Debug interface.                                  |
-| 7   | PA3  | USART.XCK   | USART XCK routed to pin to trigger evsys.         |
-| 8   |      | GND         |                                                   |
+  - 20MHz @ 5V (10MHz @ 3.3V)
+  - 2KB Flash
+  - 256B SRAM
+  - 128B EEPROM
+
+# Pinout
+
+| Pin | Port   | Function      | Usage                                             |
+| --- | ------ | ------------- | --------------------------------------------------|
+| 1   |        | `VCC`         | 5V                                                |
+| 2   | `PA6`  | `LUT0.OUT`    | WS2812 Serial Waveform                            |
+| 3   | `PA7`  | `AIN7/AINP0`  | Analog Keypad                                     |
+| 4   | `PA1`  | `TWI.SDA`     | TWI (I2C) Data Signal                             |
+| 5   | `PA2`  | `TWI.SCL`     | TWI (I2C) Clock Signal                            |
+| 6   | `PA0`  | `UPDI`        | Debug interface.                                  |
+| 7   | `PA3`  | `USART.XCK`   | USART XCK routed to pin to trigger evsys.         |
+| 8   |        | `GND`         |                                                   |
 
 
 Currently, the build only support `VDD` at 5V. Need to adjust clock for lower
