@@ -17,7 +17,11 @@
             </sourceRootList>
             <confList>
                 <confElem>
-                    <name>default</name>
+                    <name>attiny402_default</name>
+                    <type>2</type>
+                </confElem>
+                <confElem>
+                    <name>attiny804_default</name>
                     <type>2</type>
                 </confElem>
             </confList>

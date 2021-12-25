@@ -45,7 +45,10 @@ more modular with fewer inter-dependencies without the overhead.
 ## Documentation
 
  - [Protocol Details & Register File](docs/registers.md)
- - [Device Support & Implementation Details](docs/device-attiny40x.md) (currently specific to ATTint402)
+ - Device Support & Implementation Details
+   - [`ATTINY402`](docs/device-attiny40x.md) \
+     (More detail about the implemenation which is largely the same across tinyAVR-0/1 family.)
+   - [`ATTINY804`](docs/device-attiny804.md)
  - [Test & Validation](docs/test-validation.md)
  - [Test Scripts](docs/test-scripts.md)
  - Build & Configuration (TBD)

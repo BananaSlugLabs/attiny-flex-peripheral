@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   device_config.h
  * Author: fosterb
  *
@@ -17,10 +17,14 @@
 
 // ==== CONFIG_DEVICE ==========================================================
 #define DEF_DEVICE_ATTINY402                    402
+#define DEF_DEVICE_ATTINY804                    804
 
-#ifdef __ATtiny402__
+#if defined(__ATtiny402__)
 #define CONFIG_DEVICE                           DEF_DEVICE_ATTINY402
 #define CONFIG_DEVICE_INCLUDE                   "configs/attiny402.h"
+#elif defined(__ATtiny804__)
+#define CONFIG_DEVICE                           DEF_DEVICE_ATTINY804
+#define CONFIG_DEVICE_INCLUDE                   "configs/attiny804.h"
 #else
 #error "Unsupported device."
 #endif
@@ -81,7 +85,7 @@
  */
 #define DEF_SLEEP_IDLE                          1
 /**
- * Support standby mode after X milliseconds. Enabling 
+ * Support standby mode after X milliseconds. Enabling
  * CONFIG_STANDBY_SLOWCLOCK further reduces power consumption.
  */
 #define DEF_SLEEP_STANDBY                       2
@@ -93,6 +97,17 @@
  * Test mode to validate standby sequencing.
  */
 #define DEF_SLEEP_PRETEND                       4
+
+// *****************************************************************************
+// **** Hardware Peripherals ***************************************************
+// *****************************************************************************
+
+// ==== CONFIG_HW_EVSYS_USER_ASYNCn & CONFIG_HW_EVSYS_USER_SYNCn ===============
+#define DEF_HW_EVSYS_CHANNEL_OFF                0
+#define DEF_HW_EVSYS_CHANNEL_SYNC0              1
+#define DEF_HW_EVSYS_CHANNEL_SYNC1              2
+#define DEF_HW_EVSYS_CHANNEL_ASYNC0             3
+#define DEF_HW_EVSYS_CHANNEL_ASYNC1             4
 
 // *****************************************************************************
 // **** KeyPad Driver **********************************************************
@@ -111,7 +126,7 @@
  * Test Pattern: Fade a all LEDs uniformly.
  */
 #define DEF_TEST_PATTERN_TYPE_UNIFORM_FADE      2
-    
+
 // *****************************************************************************
 // **** Load Customizations ****************************************************
 // *****************************************************************************
@@ -130,11 +145,7 @@
 // ==== CONFIG_DEVICE ==========================================================
 // ... Check device is supported.
 #ifndef CONFIG_DEVICE
-#error "Unknown device."
-#else
-#if CONFIG_DEVICE != DEF_DEVICE_ATTINY402
-#error "Device is not supported."
-#endif
+#error "Unknown device. This shouldn't happen."
 #endif
 
 // ==== CONFIG_CLOCK ===========================================================
@@ -172,7 +183,7 @@
 #endif
 
 // ==== CONFIG_ABORT_FLAGS =====================================================
-// ... Repeat a sequence of 
+// ... Repeat a sequence of
 #ifndef CONFIG_ABORT_FLAGS
 #define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT | \
                                                  DEF_ABORT_FLAGS_RESTART    | \
@@ -332,14 +343,14 @@
 #endif
 /*
  * Override pin configuration using:
- * 
+ *
  * #define CONFIG_PORT_x_PINn                   0x08
  */
 
 // *****************************************************************************
 // **** Test Patterns & Simulated Faults ***************************************
 // *****************************************************************************
-    
+
 // ==== CONFIG_TEST_PATTERN ====================================================
 #ifndef CONFIG_TEST_PATTERN
 #define CONFIG_TEST_PATTERN                     DEF_DISABLE
@@ -365,12 +376,19 @@
 // *****************************************************************************
 
 // ==== CONFIG_FW_MFG, CONFIG_FW_IDENT, CONFIG_FW_VERSION ======================
+
 #ifndef CONFIG_FW_MFG
 #define CONFIG_FW_MFG                           0xBAAA
 #endif
+
 #ifndef CONFIG_FW_IDENT
-#define CONFIG_FW_IDENT                         0x2812
+#if CONFIG_DEVICE == DEF_DEVICE_ATTINY402
+#define CONFIG_FW_IDENT                         0xD402
+#elif CONFIG_DEVICE == DEF_DEVICE_ATTINY804
+#define CONFIG_FW_IDENT                         0xD804
 #endif
+#endif
+
 #ifndef CONFIG_FW_VERSION
 #define CONFIG_FW_VERSION                       0x01
 #endif

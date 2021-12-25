@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   bus.h
  * Author: fosterb
  *
@@ -18,10 +18,10 @@ extern "C" {
 typedef enum {
     Bus_StatusBusy          = (1<<0),
     Bus_StatusBusError      = (1<<1),
-            
+
     Bus_StatusCode_bp       = (4),
     Bus_StatusCode_bm       = (0xF<<Bus_StatusCode_bp),
-            
+
     Bus_StatusSuccess       = (0<<Bus_StatusCode_bp),
     Bus_StatusInProgress    = (1<<Bus_StatusCode_bp),
     Bus_StatusErrorBusy     = (2<<Bus_StatusCode_bp),
@@ -88,7 +88,7 @@ typedef struct Bus_CommandContextTag {
 extern Bus_CommandContext bus_commandContext;
 /**
  * For asynchronous completion of commands.
- * 
+ *
  * @param status Return Bus_StatusInProgress if command is async.
  */
 void bus_commandUpdateStatus (uint8_t status);

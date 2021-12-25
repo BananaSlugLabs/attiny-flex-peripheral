@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   common.h
  * Author: fosterb
  *

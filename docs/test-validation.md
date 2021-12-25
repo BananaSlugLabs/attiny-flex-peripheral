@@ -9,6 +9,12 @@ stress testing of the the I2C peripheral implementation is necessary.
 This section will describe the approach to power management, certain implementation details, and 
 will end by discussing the findings and possible improvements.
 
+*Update: Since this was prepared, I have updated my test fixture and can now isolate the current
+to only what is consumed by the MCU itself. Hopefully I'll take a 2nd look at this and include
+mode tests now that I am not limited by setup.*
+
+*MCU with default configuration, 800KHz sleep frequency, etc consumes \~750uA.*
+
 ## Power Management Methods
 
 Prior to discussing test results this section describes the implementation used in this project.

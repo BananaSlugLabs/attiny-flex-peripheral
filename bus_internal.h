@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   bus_internal.h
  * Author: fosterb
  *

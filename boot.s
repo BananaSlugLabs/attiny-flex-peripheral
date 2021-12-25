@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #include "device_config.h"
-    
+
 
 /**
  * When CONFIG_SRAM_INIT is DEF_SRAM_INIT_STRIPE/DEF_SRAM_INIT_ZERO, the SRAM is
@@ -24,7 +24,7 @@ __boot_init:
     ldi r17, 0xAA
     ldi r18, 0x55
     ldi r19, 0xA5
-#elif CONFIG_SRAM_INIT == DEF_SRAM_INIT_ZERO 
+#elif CONFIG_SRAM_INIT == DEF_SRAM_INIT_ZERO
     eor	r16, r16
     eor	r17, r17
     eor	r18, r18
@@ -36,11 +36,10 @@ __boot_init:
     ST X+, r18
     ST X+, r19
     cp R26, R28
-    cpc R27, R29  
+    cpc R27, R29
     brlt .Lnext_byte
     nop
 #elif CONFIG_SRAM_INIT != DEF_SRAM_INIT_NONE
 #error "CONFIG_SRAM_INIT must be one of DEF_SRAM_INIT_STRIPE, DEF_SRAM_INIT_ZERO, or DEF_SRAM_INIT_NONE."
 #endif
 
-    
