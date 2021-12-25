@@ -10,7 +10,7 @@
 /**
  * \Configures Fuse bits
  */
-FUSES = 
+FUSES =
 {
 	.APPEND = 0,
 	.BODCFG = ACTIVE_DIS_gc | LVL_BODLEVEL0_gc | DFP_BOD_WORKAROUND_FREQ | SLEEP_DIS_gc,

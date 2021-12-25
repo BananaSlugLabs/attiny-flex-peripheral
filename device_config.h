@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   device_config.h
  * Author: fosterb
  *
@@ -85,7 +85,7 @@
  */
 #define DEF_SLEEP_IDLE                          1
 /**
- * Support standby mode after X milliseconds. Enabling 
+ * Support standby mode after X milliseconds. Enabling
  * CONFIG_STANDBY_SLOWCLOCK further reduces power consumption.
  */
 #define DEF_SLEEP_STANDBY                       2
@@ -126,7 +126,7 @@
  * Test Pattern: Fade a all LEDs uniformly.
  */
 #define DEF_TEST_PATTERN_TYPE_UNIFORM_FADE      2
-    
+
 // *****************************************************************************
 // **** Load Customizations ****************************************************
 // *****************************************************************************
@@ -183,7 +183,7 @@
 #endif
 
 // ==== CONFIG_ABORT_FLAGS =====================================================
-// ... Repeat a sequence of 
+// ... Repeat a sequence of
 #ifndef CONFIG_ABORT_FLAGS
 #define CONFIG_ABORT_FLAGS                      (DEF_ABORT_FLAGS_BREAKPOINT | \
                                                  DEF_ABORT_FLAGS_RESTART    | \
@@ -343,14 +343,14 @@
 #endif
 /*
  * Override pin configuration using:
- * 
+ *
  * #define CONFIG_PORT_x_PINn                   0x08
  */
 
 // *****************************************************************************
 // **** Test Patterns & Simulated Faults ***************************************
 // *****************************************************************************
-    
+
 // ==== CONFIG_TEST_PATTERN ====================================================
 #ifndef CONFIG_TEST_PATTERN
 #define CONFIG_TEST_PATTERN                     DEF_DISABLE

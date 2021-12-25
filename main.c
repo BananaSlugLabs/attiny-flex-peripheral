@@ -13,8 +13,8 @@ static void app_loop () {
 #if CONFIG_TEST_ABORT
     static uint8_t cycles;
 #endif
-    
-    
+
+
     if (!led_isBusy()) {
 
         if (i == 0) {

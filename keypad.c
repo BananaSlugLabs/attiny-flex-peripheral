@@ -3,12 +3,12 @@
 
 /*
  * KeyPad Driver Information
- * 
+ *
  * This driver implements a keypad using a current mirror. This method provides
  * a roughly linear response. See:
- * 
+ *
  * https://github.com/sgmne/AnalogKeypad
- * 
+ *
  * See readme.md for further details on how this is implemented.
  */
 
@@ -30,9 +30,9 @@ ISR(ADC0_RESRDY_vect) {
     uint8_t raw = ADC0.RES;// >> 2;
     keypad_state.raw = raw;
     ADC0.INTFLAGS = ADC_RESRDY_bm | ADC_WCMP_bm;
-    
+
     sys_signal(Sys_SignalWakeLock | Sys_SignalWorkerPending);
-    
+
     if (raw > keypad_cal.threshold) {
         int8_t delta = keypad_state.raw - keypad_state.candidate;
         if ( keypad_state.candidate == 0 || delta > keypad_cal.steadyStateWindow || delta > keypad_cal.steadyStateWindow) {
@@ -103,7 +103,7 @@ static void keypad_init () {
 	ADC0.CALIB      = ADC_DUTYCYC_DUTY25_gc;                                    // CLK is less than 1.5MHz therefore use DUTYCYC
     ADC0.CTRLA      = ADC_ENABLE_bm | ADC_RUNSTBY_bm | ADC_FREERUN_bm | ADC_RESSEL_8BIT_gc;
     ADC0.COMMAND    = ADC_STCONV_bm;
-    
+
     keypad_state.cal.threshold          = adc_code(CONFIG_KP_CAL_THRESHOLD);    // 0.9 * 1V
     keypad_state.cal.offset             = adc_code(CONFIG_KP_CAL_OFFSET);       // 1V
     keypad_state.cal.vstep              = adc_code(CONFIG_KP_CAL_STEP);         // 270mV

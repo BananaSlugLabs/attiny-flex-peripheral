@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   attiny402.h
  * Author: fosterb
  *
@@ -73,16 +73,16 @@
 #define CONFIG_SLEEP                            DEF_SLEEP_IDLE
 #define CONFIG_STANDBY_SLOWCLOCK                DEF_DISABLE
 #elif TEST_GROUP == 3
-#define CONFIG_SLEEP                            DEF_SLEEP_STANDBY 
+#define CONFIG_SLEEP                            DEF_SLEEP_STANDBY
 #define CONFIG_STANDBY_SLOWCLOCK                DEF_DISABLE
 #elif TEST_GROUP == 4
-#define CONFIG_SLEEP                            DEF_SLEEP_STANDBY 
+#define CONFIG_SLEEP                            DEF_SLEEP_STANDBY
 #define CONFIG_STANDBY_SLOWCLOCK                DEF_ENABLE
 #elif TEST_GROUP == 5
-#define CONFIG_SLEEP                            DEF_SLEEP_POWERDOWN 
+#define CONFIG_SLEEP                            DEF_SLEEP_POWERDOWN
 #define CONFIG_STANDBY_SLOWCLOCK                DEF_DISABLE
 #elif TEST_GROUP == 6
-#define CONFIG_SLEEP                            DEF_SLEEP_POWERDOWN 
+#define CONFIG_SLEEP                            DEF_SLEEP_POWERDOWN
 #define CONFIG_STANDBY_SLOWCLOCK                DEF_ENABLE
 #else
 #error "Invalid test group."

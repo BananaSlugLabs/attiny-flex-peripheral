@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   signal.h
  * Author: fosterb
  *
@@ -20,35 +20,35 @@ extern "C" {
 
 /**
  * Signalling System
- * 
+ *
  * The signal system provides a low effort mechanism for publishing signals that
  * other modules can register to receive notifications (signals) without hard
- * coding function calls, using pointers, iteration, and other techniques. 
- * Instead of the usual approach, this method uses naked functions containing a  
+ * coding function calls, using pointers, iteration, and other techniques.
+ * Instead of the usual approach, this method uses naked functions containing a
  * single RCALL instruction that, when linked together, generates a single
  * function of RCALLs to the relevant subscribers (consumers of signals).
- * 
+ *
  * Like so:
- * 
+ *
  * signal_XXXX_dispatch:
  *      rcall XYZ
  *      rcall ABC
  *      rcall ...
  *      ret
- * 
+ *
  * It's that simple. Compared to other techniques I use, this method proved to
  * reduce program size, improved performance, and offers a reasonable robust &
  * safe approach.
- * 
+ *
  * This technique relies on linker scripts to ensure the order of the variables
  * is correct:
- * 
+ *
  *    .text {
  *      ...
  *      KEEP (*(SORT_BY_NAME(dispatch.*.[pxs][0-9][0-9][0-9])))
  *      ...
  *    }
- * 
+ *
  * The main weakness in this system is the priorities don't reverse for say a
  * shutdown sequence. Thus Signal_nXXXXXXX priorities are provided that flip
  * the order (unless somebody offers me a better idea). Any 3 digit priority

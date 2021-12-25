@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   sys.h
  * Author: fosterb
  *
@@ -13,7 +13,7 @@
 
 #ifdef	__cplusplus
 extern "C" {
-#endif    
+#endif
 
 #define SysInitIO_Subscribe(s,p)        Signal_Subscriber(sys_init_io,          s, p)
 #define SysInitEarly_Subscribe(s,p)     Signal_Subscriber(sys_init_early,       s, p)

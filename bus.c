@@ -5,28 +5,28 @@
 /*
  * I2C Bus Interface
  * -----------------------------------------------------------------------------
- * 
+ *
  * Index    Fields
  *  00      SSSxEEEE
  *              ^^^^ End Point      (Which register file to write)
  *          ^^^      Signal         (When write is complete, send signal to task)
  *  01      AAAAAAAA
  *          ^^^^^^^^ Address        (Address Register)
- * 
+ *
  * Example using BusPirate
  * -----------------------------------------------------------------------------
  * Note: Need clock streching patch.
- * 
+ *
  * Get Info:
- * 
+ *
  * [0x52 0x00 0x00 [0x53 r:2] -> Mfg
  * [0x52 0x00 0x02 [0x53 r:2] -> Identifier
  * [0x52 0x00 0x04 [0x53 r:2] -> Capabilities
  * [0x52 0x00 0x06 [0x53 r:1] -> Version
  * [0x52 0x00 0x00 [0x53 r:8] -> Read Mfg + Identifier + Caps + Version
- * 
+ *
  * [0x52 0x00 0x08 [0x53 r:1] -> Total LED Count
- * 
+ *
  * [0x52 0x21 0x02 0x00 0x00 0x00 0x00 0x00 0x00  0x00 0x00 0x00 0x00 0x00 0x00] -> Clear Leds (using signal)
  * [0x52 0x01 0x00 0x04 0x01] -> Update
  * [0x52 0x01 0x03 0xFF 0xFF 0xFF 0xFF 0x00 0x00  0x00 0xFF 0x00 0x00 0x00 0xFF] [0x52 0x01 0x00 0x01] -> Set Leds & Update
@@ -80,7 +80,7 @@ Bus_DefineMemoryMap(bus_iomem_devinfo, BUS_PRIORITY_001); // always slot 1
 
 ISR(TWI0_TWIS_vect) {
     uint8_t s = TWI0.SSTATUS;
-    
+
     if (s & TWI_APIF_bm) {
         if (s & TWI_AP_bm) {
             if (bus_state.state != Bus_IoFinish) {
@@ -122,14 +122,14 @@ ISR(TWI0_TWIS_vect) {
         }
         return;
     }
-    
+
     if (s & TWI_DIF_bm) {
         sys_signal(Sys_SignalWakeLock);
         if (s & TWI_DIR_bm) {
             // ************ Controller Read ****************************************
-            TWI0.SDATA = Map_GetActive()->data[bus_state.offset]; 
+            TWI0.SDATA = Map_GetActive()->data[bus_state.offset];
             TWI0.SCTRLB = TWI_CMD_ACK;
-            
+
             bus_state.offset = bus_state.offset + 1;
             if (bus_state.offset >= Map_GetActive()->length) {
                 bus_state.offset = 0;
@@ -175,14 +175,14 @@ ISR(TWI0_TWIS_vect) {
                     }
                     break;
                 }
-                
+
                 case Bus_ReadOnly:
                 {
                     FORCE_READ(TWI0.SDATA); // otherwise the compile optimizes the read
                     TWI0.SCTRLB = TWI_CMD_NACK;
                     break;
                 }
-                
+
                 case Bus_Error:
                 default:
                 {
@@ -206,9 +206,9 @@ SysLoop_Subscribe(bus_loop,         Signal_Normal);
 
 static void bus_init() {
     TWI0.SCTRLA = 0;
-    
+
     bus_state.page = DEVINFO_PAGE;
-    
+
     TWI0.CTRLA = TWI_SDAHOLD_50NS_gc;
     TWI0.DBGCTRL = 0x00;
 
@@ -234,7 +234,7 @@ static void bus_finit() {
 
 void bus_commandUpdateStatusIRQ (uint8_t status) {
     bus_iomem_control.status = (bus_iomem_control.status & ~Bus_StatusCode_bm) | status;
-    
+
     if (status != Bus_StatusInProgress) {
         bus_commandContext.lastCommand = bus_commandContext.command;
         bus_commandContext.command = 0;
@@ -252,9 +252,9 @@ static void bus_loop() {
         bus_status_t status         = Bus_StatusInProgress;
         bus_command_t command       = bus_commandContext.command;
         bus_state.state             = Bus_Idle;
-        
+
         bus_commandUpdateStatus(Bus_StatusInProgress);
-        
+
         if (command < 8) {
             uint8_t param;
             switch (command) {

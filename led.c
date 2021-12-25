@@ -61,7 +61,7 @@ ISR(USART0_TXC_vect) {
             // Note: Annoyingly, the high priority DRE interrupt is fired immediately due to high priority
             // Need to see if there is a workaround to prevent this from happening -- could pre-fill USART0.TXDATAL buffers?
             break;
-            
+
         case LED_STATE_STREAM_PIXEL_DONE:
             Led.index       = 0;
             CCL.LUT0CTRLA   &= ~CCL_ENABLE_bm;
@@ -72,7 +72,7 @@ ISR(USART0_TXC_vect) {
             Led.state       = LED_STATE_IDLE;
             led_registerfile.ctrla &= ~Led_CtrlA_Busy;
             break;
-            
+
         default:
             DEBUG_BREAKPOINT();
             break;
@@ -104,16 +104,16 @@ ISR(USART0_DRE_vect) {
             }
             sys_signal(Sys_SignalWakeLock);
             break;
-            
+
         case LED_STATE_RESET:
             USART0.TXDATAL = 0;
-            Led.index ++;   
+            Led.index ++;
             if (Led.index == LED_RESET_LENGTH) {
                 USART0.CTRLA    = USART_TXCIE_bm;  // switch to TXC IRQ
                 Led.state       = LED_STATE_RESET_DONE;
             }
             break;
-            
+
         default:
             DEBUG_BREAKPOINT();
             break;
@@ -132,7 +132,7 @@ ISR(USART0_DRE_vect) {
 static void led_init() {
     // *************************************************************************
     // **** Event System Configuration *****************************************
-    
+
     // ---- Generators: Async
 #if defined(CONFIG_HW_EVSYS_GENERATOR_ASYNC0)
 	EVSYS.ASYNCCH0      = CONFIG_HW_EVSYS_GENERATOR_ASYNC0;
@@ -166,7 +166,7 @@ static void led_init() {
 #endif
 #if defined(CONFIG_HW_EVSYS_USER_ASYNC2)
 	EVSYS.ASYNCUSER2    = CONFIG_HW_EVSYS_USER_ASYNC2;
-#endif    
+#endif
 #if defined(CONFIG_HW_EVSYS_USER_ASYNC3)
 	EVSYS.ASYNCUSER3    = CONFIG_HW_EVSYS_USER_ASYNC3;
 #endif
@@ -191,7 +191,7 @@ static void led_init() {
 #if defined(CONFIG_HW_EVSYS_USER_ASYNC10)
 	EVSYS.ASYNCUSER10   = CONFIG_HW_EVSYS_USER_ASYNC10;
 #endif
-    
+
     // ---- Users: Sync Only
 #if defined(CONFIG_HW_EVSYS_USER_SYNC0)
 	EVSYS.SYNCUSER0     = CONFIG_HW_EVSYS_USER_SYNC0;
@@ -199,7 +199,7 @@ static void led_init() {
 #if defined(CONFIG_HW_EVSYS_USER_SYNC1)
 	EVSYS.SYNCUSER1     = CONFIG_HW_EVSYS_USER_SYNC1;
 #endif
-    
+
     // *************************************************************************
     // **** CCL Configuration **************************************************
 
@@ -213,14 +213,14 @@ static void led_init() {
 	CCL.LUT0CTRLA       = CCL_OUTEN_bm | CCL_ENABLE_bm;
 	CCL.LUT1CTRLA       = CCL_ENABLE_bm;
 	CCL.CTRLA           = CCL_RUNSTDBY_bm | CCL_ENABLE_bm;
-    
+
     // *************************************************************************
     // **** TCB0 Configuration *************************************************
-    
+
     TCB0.CCMP           = 0x03;
     TCB0.CNT            = 0x00;
     TCB0.CTRLB          = TCB_CNTMODE_SINGLE_gc;
-    
+
     TCB0.DBGCTRL        = 0x00;
     TCB0.EVCTRL         = TCB_CAPTEI_bm | TCB_EDGE_bm;
     TCB0.INTCTRL        = 0x00;
@@ -230,7 +230,7 @@ static void led_init() {
 
     // *************************************************************************
     // **** UART Configuration *************************************************
-    
+
     //set baud rate register
     USART0.CTRLB        = 0;
     USART0.BAUD         = (uint16_t)LED_BAUD(500000);
@@ -241,20 +241,20 @@ static void led_init() {
     USART0.EVCTRL       = 0x00;
     USART0.RXPLCTRL     = 0x00;
     USART0.TXPLCTRL     = 0x00;
-    
+
     // *************************************************************************
     // **** Misc Initialization ************************************************
-    
+
     Led.state           = LED_STATE_IDLE;
     Led.index           = 0;
     Led.total           = 0;
-    
+
     led_setAll(&led_color_black);
-    
+
     led_registerfile.data.count = CONFIG_LED_COUNT;
     led_registerfile.ctrla      = 0;
     led_registerfile.ctrlb      = 0;
-    
+
 #if CONFIG_LED_IRQ_PERF
     CONFIG_LED_IRQ_PORT.DIR |= (1<<CONFIG_LED_IRQ_PIN);
     CONFIG_LED_IRQ_PORT.OUT &= ~(1<<CONFIG_LED_IRQ_PIN);
@@ -285,31 +285,31 @@ void led_update() {
     if (led_isBusy()) {
         return;
     }
-    
+
     if ( led_registerfile.data.count == 0 ) {
         // nothing to do...
         led_registerfile.ctrla = 0;
         return;
     }
-    
+
     sys_signal(Sys_SignalWakeLock);
-    
+
     if ( led_registerfile.data.count > CONFIG_LED_COUNT) {
         led_registerfile.data.count = CONFIG_LED_COUNT;
     }
-    
+
     // Report busy & setup registers
     led_registerfile.ctrla  = Led_CtrlA_Busy;
     Led.total               = led_registerfile.data.count * sizeof(Led_Color);
     Led.state               = LED_STATE_RESET;
     Led.index               = 0;
-    
+
     // Disable CCL Output, Timer, and clear USART Transmit Done Flag
     CCL.LUT0CTRLA           &= ~CCL_ENABLE_bm;
     TCB0.CTRLA              &= ~TCB_ENABLE_bm;
     USART0.STATUS           = USART_TXCIF_bm;
     USART0.CTRLB            |= USART_TXEN_bm;
-    
+
     if (SREG & CPU_I_bm) {
         USART0.CTRLA = USART_DREIE_bm;
     } else {

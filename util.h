@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   util.h
  * Author: fosterb
  *
@@ -23,7 +23,7 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-    
+
 #define _UTIL_STRY(s)               # s
 #define UTIL_STRY(s)                _UTIL_STRY(s)
 #define _UTIL_PASTE(a,b)            a ## b
@@ -61,16 +61,16 @@ extern "C" {
 #define FORCE_READ(v)           asm volatile ("" : : "r" (&v))
 
 /* FOR DISCARD SECTIONS in linker script...
- * 
+ *
  * MPLab X's debugger has a software defect where it treats uninitialized values
  * in discard sections of the linker script to be set to 0s when loading
  * firmware. Thus will begin to clear the memory at 0x8000 (0x0). It does not
- * impact the hex files as this is handled with objcopy. 
- * 
+ * impact the hex files as this is handled with objcopy.
+ *
  * For some reason setting a random value causes the debugger to properly handle
  * the discard section.
  */
-#define _MPLABX_WORKAROUD = 0xAA 
+#define _MPLABX_WORKAROUD = 0xAA
 
 // Not used currently...
 extern const uint8_t util_bitmask [8];

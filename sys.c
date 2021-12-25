@@ -76,19 +76,19 @@ ISR(BADISR_vect) {
 
 void sys_abort(Sys_AbortCode code) {
     DISABLE_INTERRUPTS();
-    
+
     sys_fault = code;
-    
+
 #if _CONFIG_ABORT_BREAKPOINT
     DEBUG_BREAKPOINT();
 #endif
-    
+
     wdt_reset();
     wdt_disable();
-    
+
     signal_dispatch(sys_finit);
     signal_dispatch(sys_abort);
-    
+
 #if _CONFIG_ABORT_COUNT > 0 && CONFIG_LED_ENABLE
     for (uint8_t count = 0; count < _CONFIG_ABORT_COUNT; count ++) {
         led_setAll(&_CONFIG_ABORT_COLOR1);
@@ -99,7 +99,7 @@ void sys_abort(Sys_AbortCode code) {
         time_sleep(CONFIG_ABORT_TIMER_LO);
     }
 #endif
-    
+
 #if _CONFIG_ABORT_RESTART
     sys_restart();
 #else
@@ -119,26 +119,26 @@ int main () {
         DEBUG_BREAKPOINT();
     }
     RSTCTRL.RSTFR = 0xFF;
-    
+
     signal_dispatch(sys_init_io);
     signal_dispatch(sys_init_early);
     signal_dispatch(sys_init);
-    
+
     //wdt_reset();
     sys_signalValue |= Sys_SignalWakeLock | Sys_SignalWorkerPending; // always do at least one loop at startup
     ENABLE_INTERRUPTS();
     signal_dispatch(sys_start);
     while(1) {
         wdt_reset();
-        
+
         Sys_Signal sigs;
-        
+
         DISABLE_INTERRUPTS();
-        
+
         sigs = sys_signalValue;
         sys_signalValue = 0;
 #if CONFIG_SLEEP
-        
+
 #if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
         if (sigs == Sys_SignalEnterStandby) {
             signal_dispatch(sys_standby_enter);
@@ -173,13 +173,13 @@ int main () {
         }
 #endif
         ENABLE_INTERRUPTS();
-        
+
 #if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
         if (sigs & Sys_SignalWakeLock) {
             time_resetStabdbyTimer();
         }
 #endif
-#if !CONFIG_SLEEP 
+#if !CONFIG_SLEEP
         signal_dispatch(sys_loop);
 #else
         if (sigs & Sys_SignalWorkerPending) {
@@ -209,11 +209,11 @@ static void sys_initIO() {
         *((uint8_t *)&PORTC + 0x10 + i) |= 1 << PORT_PULLUPEN_bp;
     }
 #endif
-    
+
 #if CONFIG_HAS_PORT_A
     PORTA.DIR = CONFIG_PORT_A_DIR;
     PORTA.OUT = CONFIG_PORT_A_OUT;
-    
+
 #if defined(CONFIG_PORT_A_PIN0)
     PORTA.PIN0CTRL = CONFIG_PORT_A_PIN0;
 #endif
@@ -225,13 +225,13 @@ static void sys_initIO() {
 #endif
 #if defined(CONFIG_PORT_A_PIN3)
     PORTA.PIN3CTRL = CONFIG_PORT_A_PIN3;
-#endif    
+#endif
 #if defined(CONFIG_PORT_A_PIN4)
     PORTA.PIN4CTRL = CONFIG_PORT_A_PIN4;
 #endif
 #if defined(CONFIG_PORT_A_PIN5)
     PORTA.PIN5CTRL = CONFIG_PORT_A_PIN5;
-#endif    
+#endif
 #if defined(CONFIG_PORT_A_PIN6)
     PORTA.PIN6CTRL = CONFIG_PORT_A_PIN6;
 #endif
@@ -239,7 +239,7 @@ static void sys_initIO() {
     PORTA.PIN7CTRL = CONFIG_PORT_A_PIN7;
 #endif
 #endif
-    
+
 #if CONFIG_HAS_PORT_B
     PORTB.DIR = CONFIG_PORT_B_DIR;
     PORTB.OUT = CONFIG_PORT_B_OUT;
@@ -254,13 +254,13 @@ static void sys_initIO() {
 #endif
 #if defined(CONFIG_PORT_B_PIN3)
     PORTB.PIN3CTRL = CONFIG_PORT_B_PIN3;
-#endif    
+#endif
 #if defined(CONFIG_PORT_B_PIN4)
     PORTB.PIN4CTRL = CONFIG_PORT_B_PIN4;
 #endif
 #if defined(CONFIG_PORT_B_PIN5)
     PORTB.PIN5CTRL = CONFIG_PORT_B_PIN5;
-#endif    
+#endif
 #if defined(CONFIG_PORT_B_PIN6)
     PORTB.PIN6CTRL = CONFIG_PORT_B_PIN6;
 #endif
@@ -272,7 +272,7 @@ static void sys_initIO() {
 #if CONFIG_HAS_PORT_C
     PORTC.DIR = CONFIG_PORT_C_DIR;
     PORTC.OUT = CONFIG_PORT_C_OUT;
-    
+
 #if defined(CONFIG_PORT_C_PIN0)
     PORTC.PIN0CTRL = CONFIG_PORT_C_PIN0;
 #endif
@@ -284,13 +284,13 @@ static void sys_initIO() {
 #endif
 #if defined(CONFIG_PORT_C_PIN3)
     PORTC.PIN3CTRL = CONFIG_PORT_C_PIN3;
-#endif    
+#endif
 #if defined(CONFIG_PORT_C_PIN4)
     PORTC.PIN4CTRL = CONFIG_PORT_C_PIN4;
 #endif
 #if defined(CONFIG_PORT_C_PIN5)
     PORTC.PIN5CTRL = CONFIG_PORT_C_PIN5;
-#endif    
+#endif
 #if defined(CONFIG_PORT_C_PIN6)
     PORTC.PIN6CTRL = CONFIG_PORT_C_PIN6;
 #endif
@@ -298,7 +298,7 @@ static void sys_initIO() {
     PORTC.PIN7CTRL = CONFIG_PORT_C_PIN7;
 #endif
 #endif
-    
+
     /* PORTMUX Initialization */
 #if defined(CONFIG_PINMUX_A)
     PORTMUX.CTRLA = CONFIG_PINMUX_A;
@@ -318,59 +318,59 @@ static void sys_init() {
     // *************************************************************************
     // ******** Watchdog Timer *************************************************
     //wdt_enable(WDTO_2S);
-    
+
     // *************************************************************************
     // ******** Brown Out Detector *********************************************
 #if 0
     ccp_write_io((void*)&(BOD.CTRLA),0x00);
 
-    //VLMCFG BELOW; VLMIE disabled; 
+    //VLMCFG BELOW; VLMIE disabled;
 	BOD.INTCTRL = 0x00;
 
-    //VLMLVL 5ABOVE; 
+    //VLMLVL 5ABOVE;
 	BOD.VLMCTRLA = 0x00;
 #endif
-    
+
     // *************************************************************************
     // ******** Sleep Controller ***********************************************
-    
+
     ccp_write_io((void*)&(SLPCTRL.CTRLA),0x00);
-    
+
     // *************************************************************************
     // ******** Clock Init *****************************************************
-    
-    //RUNSTDBY disabled; 
+
+    //RUNSTDBY disabled;
     ccp_write_io((void*)&(CLKCTRL.OSC32KCTRLA),0x00);
 
-    //RUNSTDBY disabled; 
+    //RUNSTDBY disabled;
     ccp_write_io((void*)&(CLKCTRL.OSC20MCTRLA),0x00);
 
-    //PDIV 2X; PEN disabled; 
+    //PDIV 2X; PEN disabled;
     ccp_write_io((void*)&(CLKCTRL.MCLKCTRLB),0x00);
 
-    //CLKOUT disabled; CLKSEL OSC20M; 
+    //CLKOUT disabled; CLKSEL OSC20M;
     ccp_write_io((void*)&(CLKCTRL.MCLKCTRLA),0x00);
 
-    //LOCKEN disabled; 
+    //LOCKEN disabled;
     ccp_write_io((void*)&(CLKCTRL.MCLKLOCK),0x00);
-    
+
     // *************************************************************************
     // ******** Interrupt Init *************************************************
-    
-    //IVSEL disabled; CVT disabled; LVL0RR disabled; 
+
+    //IVSEL disabled; CVT disabled; LVL0RR disabled;
     ccp_write_io((void*)&(CPUINT.CTRLA),0x00);
-    
-    //LVL0PRI 0; 
+
+    //LVL0PRI 0;
     CPUINT.LVL0PRI = 0x00;
-    
-    //LVL1VEC 23; 
+
+    //LVL1VEC 23;
     CPUINT.LVL1VEC = 0x17;
-    
+
     // *************************************************************************
     // ******** Time Init ******************************************************
-    
+
     while (RTC.STATUS > 0) {}
-    
+
 #if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
     time_enableStabdbyTimer();
 #else
@@ -388,13 +388,13 @@ static void sys_init() {
     //Clock selection
     RTC.CLKSEL = 0x00;
 
-    //RUNSTDBY disabled; PRESCALER DIV16; RTCEN enabled; 
+    //RUNSTDBY disabled; PRESCALER DIV16; RTCEN enabled;
     RTC.CTRLA = RTC_PRESCALER_DIV16_gc | RTC_RTCEN_bm;//0x21;/**/
 
     // Wait for all register to be synchronized
-    while (RTC.PITSTATUS > 0) {} 
+    while (RTC.PITSTATUS > 0) {}
 
-    //PI disabled; 
+    //PI disabled;
     RTC.PITINTCTRL = 0;
 }
 
@@ -403,11 +403,11 @@ static void sys_init() {
 
 time16_t time_sleep(timer_interval_t interval) {
     uint16_t start, now, delta;
-    
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         start =  RTC.CNT;
     }
-    
+
     for (;;) {
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             now =  RTC.CNT;
@@ -421,11 +421,11 @@ time16_t time_sleep(timer_interval_t interval) {
 
 time16_t time_get16() {
     uint16_t time;
-    
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         time =  RTC.CNT;
     }
-    
+
     return time;
 }
 
