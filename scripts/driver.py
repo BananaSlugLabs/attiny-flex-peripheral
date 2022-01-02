@@ -193,7 +193,7 @@ class LedDevice:
         for chunk in [buf[i:i + LedDevice.CHUNK_SIZE] for i in range(0, len(buf), LedDevice.CHUNK_SIZE)]:
             rc, data = self._intf.raw.bulk_trans(len(chunk),chunk)
             if rc != 1 or any(map(lambda x: x == 1, data)):
-                raise BusError("Failed to write buffer.")
+                raise BusError(f"Failed to write buffer. (Size: {len(buf)}; Chunk Size: {len(chunk)})")
         self._intf.raw.send_stop_bit()
 
     def read(self, index, size):

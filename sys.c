@@ -131,13 +131,12 @@ int main () {
     while(1) {
         wdt_reset();
 
-        Sys_Signal sigs;
 
+#if CONFIG_SLEEP
         DISABLE_INTERRUPTS();
-
+        Sys_Signal sigs;
         sigs = sys_signalValue;
         sys_signalValue = 0;
-#if CONFIG_SLEEP
 
 #if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
         if (sigs == Sys_SignalEnterStandby) {
@@ -171,8 +170,10 @@ int main () {
             sleep_mode();
             continue;
         }
-#endif
         ENABLE_INTERRUPTS();
+#else
+        sys_signalValue = 0;
+#endif
 
 #if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
         if (sigs & Sys_SignalWakeLock) {
@@ -361,12 +362,13 @@ static void sys_init() {
     //IVSEL disabled; CVT disabled; LVL0RR disabled;
     ccp_write_io((void*)&(CPUINT.CTRLA),0x00);
 
+#if CONFIG_HW_IRQ_PRIORITY
     //LVL0PRI 0;
     CPUINT.LVL0PRI = 0x00;
 
     //LVL1VEC 23;
-    CPUINT.LVL1VEC = 0x17;
-
+    CPUINT.LVL1VEC = CONFIG_HW_IRQ_PRIORITY;
+#endif
     // *************************************************************************
     // ******** Time Init ******************************************************
 
@@ -442,7 +444,6 @@ static inline void sys_fastClock() {
 
 #if CONFIG_SLEEP >= DEF_SLEEP_STANDBY
 ISR(RTC_CNT_vect) {
-    DEBUG_BREAKPOINT();
     RTC.INTFLAGS = RTC_CMP_bm;
     sys_signalIRQ(Sys_SignalEnterStandby);
 }

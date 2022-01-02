@@ -15,8 +15,8 @@
  * | 1   |      | VCC         | 5V                                                    |
  * | 2   | PA4  | LUT0.OUT    | WS2812 Serial Waveform                                |
  * | 3   | PA5  | AIN5        | Analog Keypad                                         |
- * | 4   | PA6  |             | Unused.                                               |
- * | 5   | PA7  |             | Unused.                                               |
+ * | 4   | PA6  |             | Unused / LED_IRQ_PERF                                 |
+ * | 5   | PA7  |             | Unused / KP_IRQ_PERF                                  |
  * | 6   | PB3  |             | Unused.                                               |
  * | 7   | PB2  |             | Unused.                                               |
  * | 8   | PB1  | TWI.SDA     | TWI (I2C) Data Signal                                 |
@@ -64,25 +64,21 @@
 //#define CONFIG_HW_EVSYS_USER_ASYNC10            DEF_HW_EVSYS_CHANNEL_OFF
 //#define CONFIG_HW_EVSYS_USER_SYNC0              DEF_HW_EVSYS_CHANNEL_OFF
 //#define CONFIG_HW_EVSYS_USER_SYNC1              DEF_HW_EVSYS_CHANNEL_OFF
+// Prioritize LED IRQ
+#define CONFIG_HW_IRQ_PRIORITY                  USART0_DRE_vect_num
+
+//#define CONFIG_LED_IRQ_PERF                     DEF_ENABLE
+#define CONFIG_LED_IRQ_PORT                     VPORTA
+#define CONFIG_LED_IRQ_PIN                      6
 
 // *****************************************************************************
 // **** KeyPad Hardware Configuration ******************************************
 // *****************************************************************************
 #define CONFIG_KP_ADC_PIN                       5
 
-// When CONFIG_LED_IRQ_PERF is set use this port for toggling...
-#if 0
-#define CONFIG_LED_IRQ_PERF                     DEF_ENABLE
-#define CONFIG_LED_IRQ_PORT                     VPORTA
-#define CONFIG_LED_IRQ_PIN                      2               // Reuses SCL pin
-#define CONFIG_BUS_ENABLE                       DEF_DISABLE     // Can't use I2C with this configuration
-
-#if defined(CONFIG_LED_IRQ_PERF) && CONFIG_LED_IRQ_PERF
-// Forces test mode when performance mode is selected.
-#define CONFIG_TEST_PATTERN                     DEF_TEST_PATTERN_TYPE_SINGLE_FADE
-//#define CONFIG_TEST_ABORT                       8
-#endif
-#endif
+//#define CONFIG_KP_IRQ_PERF                      DEF_ENABLE
+#define CONFIG_KP_IRQ_PORT                      VPORTA
+#define CONFIG_KP_IRQ_PIN                       7
 
 #endif	/* ATTINY804_H */
 

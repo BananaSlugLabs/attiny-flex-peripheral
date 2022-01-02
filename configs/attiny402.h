@@ -54,6 +54,9 @@
 //#define CONFIG_HW_EVSYS_USER_SYNC0              DEF_HW_EVSYS_CHANNEL_OFF
 //#define CONFIG_HW_EVSYS_USER_SYNC1              DEF_HW_EVSYS_CHANNEL_OFF
 
+// Prioritize LED IRQ
+#define CONFIG_HW_IRQ_PRIORITY                  USART0_DRE_vect_num
+
 // *****************************************************************************
 // **** KeyPad Hardware Configuration ******************************************
 // *****************************************************************************
@@ -99,8 +102,6 @@
 #error "Bad test case selected"
 #endif
 #endif
-
-
 
 // When CONFIG_LED_IRQ_PERF is set use this port for toggling...
 #if 0
