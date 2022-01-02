@@ -140,7 +140,7 @@ ISR(TWI0_TWIS_vect) {
                 case Bus_AddressOrRead:
                 {
                     uint8_t addr = TWI0.SDATA;
-                    if (addr & HIMEM_MASK) {
+                    if ((addr & HIMEM_MASK) == HIMEM_MASK) {
                         bus_state.activePage    = CONFIG_PAGE;
                         addr                    = addr & ~HIMEM_MASK;
                     } else {

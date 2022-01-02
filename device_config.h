@@ -158,6 +158,11 @@
 #endif
 #define F_CPU                                   CONFIG_CLOCK
 
+// ==== CONFIG_HW_IRQ_PRIORITY =================================================
+#ifndef CONFIG_HW_IRQ_PRIORITY
+#define CONFIG_HW_IRQ_PRIORITY DEF_DISABLE
+#endif
+
 // ==== CONFIG_SLEEP ===========================================================
 #ifndef CONFIG_SLEEP
 #define CONFIG_SLEEP                            DEF_SLEEP_STANDBY
@@ -266,6 +271,10 @@
 #endif
 
 // *****************************************************************************
+// **** LED Configuration ******************************************************
+// *****************************************************************************
+
+// *****************************************************************************
 // *** Keypad Support **********************************************************
 // *****************************************************************************
 
@@ -289,6 +298,19 @@
  */
 #ifndef CONFIG_KP_HISTORY
 #define CONFIG_KP_HISTORY                       DEF_DISABLE
+#endif
+
+// ==== CONFIG_LED_IRQ_PERF, CONFIG_LED_IRQ_PORT, CONFIG_LED_IRQ_PIN ===========
+#ifndef CONFIG_KP_IRQ_PERF
+#define CONFIG_KP_IRQ_PERF                     DEF_DISABLE
+#endif
+
+#if CONFIG_KP_IRQ_PERF && !defined(CONFIG_KP_IRQ_PORT)
+#error "Must define CONFIG_KP_IRQ_PORT to use CONFIG_KP_IRQ_PERF."
+#endif
+
+#if CONFIG_KO_IRQ_PERF && !defined(CONFIG_KP_IRQ_PIN)
+#error "Must define CONFIG_KP_IRQ_PORT to use CONFIG_KP_IRQ_PIN."
 #endif
 
 // *****************************************************************************

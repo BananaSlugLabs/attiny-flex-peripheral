@@ -27,6 +27,9 @@ SysFinit_Subscribe      (keypad_finit,         Signal_nNormal);
 SysLoop_Subscribe       (keypad_worker,        Signal_Normal);
 
 ISR(ADC0_RESRDY_vect) {
+#if CONFIG_KP_IRQ_PERF
+    CONFIG_KP_IRQ_PORT.OUT |= (1<<CONFIG_KP_IRQ_PIN);
+#endif
     uint8_t raw = ADC0.RES;// >> 2;
     keypad_state.raw = raw;
     ADC0.INTFLAGS = ADC_RESRDY_bm | ADC_WCMP_bm;
@@ -63,6 +66,10 @@ ISR(ADC0_RESRDY_vect) {
         ADC0.WINLT = 0;
         ADC0.INTCTRL = ADC_WCMP_bm;
     }
+
+#if CONFIG_KP_IRQ_PERF
+    CONFIG_KP_IRQ_PORT.OUT &= ~(1<<CONFIG_KP_IRQ_PIN);
+#endif
 }
 
 ISR(ADC0_WCOMP_vect) {
@@ -109,6 +116,11 @@ static void keypad_init () {
     keypad_state.cal.vstep              = adc_code(CONFIG_KP_CAL_STEP);         // 270mV
     keypad_state.cal.steadyStateWindow  = adc_code(CONFIG_KP_CAL_STREADY);      // steady state window
     keypad_state.cal.filter             = CONFIG_KP_CAL_FILTER;                 // number of steady steps before acceptance
+    
+#if CONFIG_KP_IRQ_PERF
+    CONFIG_KP_IRQ_PORT.DIR |= (1<<CONFIG_KP_IRQ_PIN);
+    CONFIG_KP_IRQ_PORT.OUT &= ~(1<<CONFIG_KP_IRQ_PIN);
+#endif
 }
 
 static void keypad_finit () {

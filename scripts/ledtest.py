@@ -22,18 +22,19 @@ def run_test(device):
     Log.i(None, f"Led info: {Util.toHex(ledInfo)}")
 
     device.setTxCommand(8)
-    maxColor = 128
+    maxColor = 16
+    stepSize = 1
     index = 0
     while True:
         if (index & (0x2|0x4|0x8)) == 0:
             index |= 0x2
-        for color in range(0,maxColor,4):
+        for color in range(0,maxColor,stepSize):
             color = maxColor - 1 - color if index & 1 else color
 
             r = color if index & 0x2 else 0
             g = color if index & 0x4 else 0
             b = color if index & 0x8 else 0
-            device.write(3, bytes((g,r,b))*4)
+            device.write(3, bytes((g,r,b))*32)
         index += 1
 
 
