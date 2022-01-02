@@ -20,7 +20,7 @@ Keypad using [current mirror approach](https://github.com/sgmne/AnalogKeypad).
 </td></tr>
 
 <tr>
-<th><img src="./assets/leaf.png" width="95%" align="center"></td>
+<th><img src="./assets/leaf.jpg" width="95%" align="center"></td>
 </tr><tr>
 <td>
 
