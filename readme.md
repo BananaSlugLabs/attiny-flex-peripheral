@@ -18,6 +18,15 @@ domes (the first switch is populated).
 Keypad using [current mirror approach](https://github.com/sgmne/AnalogKeypad).
 
 </td></tr>
+
+<tr>
+<th><img src="./assets/leaf.png" width="95%" align="center"></td>
+</tr><tr>
+<td>
+
+🇨🇦 Maple Leaf demonstration board with 29 LEDs. :)
+
+</td></tr>
 </table>
 
 ## Purpose
