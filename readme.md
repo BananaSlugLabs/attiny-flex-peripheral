@@ -3,19 +3,28 @@
 
 <table width="100%">
 <tr>
-<th><img src="./assets/top.png" width="95%" align="center"></td>
-<th><img src="./assets/keypad.jpg" width="95%" align="center"></td>
+<th width="50%"><img src="./assets/top.png" width="95%" align="center"></td>
+<th width="50%"><img src="./assets/keypad.jpg" width="95%" align="center"></td>
 </tr><tr>
-<td>
+<td width="50%">
 
 Demo board of a key pad & RGB leds. The keypad uses
 [Snaptron BL10280](https://www.snaptron.com/part-number/bl10280/) back lit
 domes (the first switch is populated).
 
 </td>
-<td>
+<td width="50%">
 
 Keypad using [current mirror approach](https://github.com/sgmne/AnalogKeypad).
+
+</td></tr>
+
+<tr>
+<th><img src="./assets/leaf.jpg" width="95%" align="center"></td>
+</tr><tr>
+<td width="50%">
+
+🇨🇦 Maple Leaf demonstration board with 29 LEDs. :)
 
 </td></tr>
 </table>
